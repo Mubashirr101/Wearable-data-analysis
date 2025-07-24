@@ -1,0 +1,1092 @@
+
+ ------DF1: com.samsung.health.caffeine_intake.20250723145868-------
+<class 'pandas.core.frame.DataFrame'>
+Index: 1 entries, 2025-07-22 14:41:00.000 to 2025-07-22 14:41:00.000
+Data columns (total 11 columns):
+ #   Column       Non-Null Count  Dtype  
+---  ------       --------------  -----  
+ 0   start_time   1 non-null      float64
+ 1   amount       0 non-null      float64
+ 2   custom       1 non-null      object 
+ 3   update_time  1 non-null      object 
+ 4   create_time  1 non-null      object 
+ 5   time_offset  1 non-null      object 
+ 6   deviceuuid   1 non-null      float64
+ 7   unit_amount  0 non-null      float64
+ 8   comment      1 non-null      object 
+ 9   pkg_name     1 non-null      object 
+ 10  datauuid     0 non-null      float64
+dtypes: float64(5), object(6)
+memory usage: 96.0+ bytes
+
+ ------DF2: com.samsung.health.device_profile.20250723145868-------
+<class 'pandas.core.frame.DataFrame'>
+Index: 4 entries, Samsung to Samsung Electronics
+Data columns (total 20 columns):
+ #   Column               Non-Null Count  Dtype  
+---  ------               --------------  -----  
+ 0   manufacturer         1 non-null      float64
+ 1   providing_step_goal  0 non-null      float64
+ 2   create_sh_ver        1 non-null      float64
+ 3   step_source_group    1 non-null      float64
+ 4   device_type          1 non-null      float64
+ 5   backsync_step_goal   1 non-null      object 
+ 6   capability           1 non-null      float64
+ 7   modify_sh_ver        4 non-null      int64  
+ 8   device_group         4 non-null      object 
+ 9   update_time          4 non-null      object 
+ 10  create_time          4 non-null      object 
+ 11  name                 4 non-null      object 
+ 12  model                0 non-null      float64
+ 13  legacy_deviceuuid    0 non-null      float64
+ 14  connectivity_type    4 non-null      object 
+ 15  deviceuuid           4 non-null      object 
+ 16  pkg_name             0 non-null      float64
+ 17  accessory_type       3 non-null      object 
+ 18  fixed_name           4 non-null      object 
+ 19  datauuid             0 non-null      float64
+dtypes: float64(10), int64(1), object(9)
+memory usage: 672.0+ bytes
+
+ ------DF3: com.samsung.health.food_info.20250723145868-------
+<class 'pandas.core.frame.DataFrame'>
+Index: 6 entries, 300.0 to 70.0
+Data columns (total 34 columns):
+ #   Column                          Non-Null Count  Dtype  
+---  ------                          --------------  -----  
+ 0   potassium                       6 non-null      float64
+ 1   vitamin_a                       6 non-null      float64
+ 2   vitamin_c                       6 non-null      float64
+ 3   vitamin_d                       6 non-null      float64
+ 4   cholesterol                     6 non-null      object 
+ 5   description                     0 non-null      float64
+ 6   custom                          6 non-null      object 
+ 7   provider_food_id                6 non-null      int64  
+ 8   metric_serving_amount           6 non-null      float64
+ 9   sodium                          6 non-null      float64
+ 10  dietary_fiber                   6 non-null      float64
+ 11  total_fat                       6 non-null      object 
+ 12  update_time                     6 non-null      object 
+ 13  create_time                     6 non-null      float64
+ 14  monosaturated_fat               6 non-null      float64
+ 15  protein                         6 non-null      float64
+ 16  polysaturated_fat               6 non-null      float64
+ 17  iron                            6 non-null      object 
+ 18  name                            6 non-null      float64
+ 19  sugar                           6 non-null      float64
+ 20  added_sugar                     6 non-null      float64
+ 21  calcium                         6 non-null      float64
+ 22  calorie                         6 non-null      object 
+ 23  serving_description             0 non-null      float64
+ 24  info_provider                   6 non-null      object 
+ 25  deviceuuid                      6 non-null      int64  
+ 26  metric_serving_unit             6 non-null      float64
+ 27  saturated_fat                   6 non-null      float64
+ 28  trans_fat                       6 non-null      object 
+ 29  pkg_name                        6 non-null      float64
+ 30  carbohydrate                    6 non-null      float64
+ 31  unit_count_per_calorie          6 non-null      object 
+ 32  datauuid                        6 non-null      int64  
+ 33  default_number_of_serving_unit  0 non-null      float64
+dtypes: float64(22), int64(3), object(9)
+memory usage: 1.6+ KB
+
+ ------DF4: com.samsung.health.food_intake.20250723145868-------
+<class 'pandas.core.frame.DataFrame'>
+Index: 5 entries, 63020310 to 63020310
+Data columns (total 19 columns):
+ #   Column           Non-Null Count  Dtype  
+---  ------           --------------  -----  
+ 0   create_sh_ver    5 non-null      object 
+ 1   start_time       5 non-null      float64
+ 2   amount           0 non-null      float64
+ 3   custom           5 non-null      int64  
+ 4   modify_sh_ver    5 non-null      object 
+ 5   update_time      5 non-null      object 
+ 6   create_time      5 non-null      int64  
+ 7   meal_type        0 non-null      float64
+ 8   client_data_id   5 non-null      object 
+ 9   name             5 non-null      int64  
+ 10  unit             0 non-null      float64
+ 11  client_data_ver  5 non-null      float64
+ 12  calorie          5 non-null      object 
+ 13  time_offset      5 non-null      object 
+ 14  deviceuuid       0 non-null      float64
+ 15  comment          5 non-null      object 
+ 16  pkg_name         5 non-null      object 
+ 17  datauuid         5 non-null      object 
+ 18  food_info_id     0 non-null      float64
+dtypes: float64(7), int64(3), object(9)
+memory usage: 800.0+ bytes
+
+ ------DF5: com.samsung.health.height.20250723145868-------
+<class 'pandas.core.frame.DataFrame'>
+Index: 1 entries, 62910051 to 62910051
+Data columns (total 11 columns):
+ #   Column         Non-Null Count  Dtype  
+---  ------         --------------  -----  
+ 0   create_sh_ver  1 non-null      object 
+ 1   start_time     0 non-null      float64
+ 2   custom         1 non-null      float64
+ 3   height         1 non-null      int64  
+ 4   modify_sh_ver  1 non-null      object 
+ 5   update_time    1 non-null      object 
+ 6   create_time    1 non-null      object 
+ 7   time_offset    1 non-null      object 
+ 8   deviceuuid     1 non-null      object 
+ 9   pkg_name       1 non-null      object 
+ 10  datauuid       0 non-null      float64
+dtypes: float64(3), int64(1), object(7)
+memory usage: 96.0+ bytes
+
+ ------DF6: com.samsung.health.movement.20250723145868-------
+<class 'pandas.core.frame.DataFrame'>
+Index: 117 entries, 62800471 to 62981551
+Data columns (total 13 columns):
+ #   Column         Non-Null Count  Dtype  
+---  ------         --------------  -----  
+ 0   create_sh_ver  117 non-null    object 
+ 1   start_time     0 non-null      float64
+ 2   custom         117 non-null    object 
+ 3   binning_data   117 non-null    int64  
+ 4   modify_sh_ver  117 non-null    object 
+ 5   update_time    117 non-null    object 
+ 6   create_time    117 non-null    object 
+ 7   time_offset    117 non-null    object 
+ 8   deviceuuid     0 non-null      float64
+ 9   comment        117 non-null    object 
+ 10  pkg_name       117 non-null    object 
+ 11  end_time       117 non-null    object 
+ 12  datauuid       0 non-null      float64
+dtypes: float64(3), int64(1), object(9)
+memory usage: 12.8+ KB
+
+ ------DF7: com.samsung.health.nutrition.20250723145868-------
+<class 'pandas.core.frame.DataFrame'>
+Index: 3 entries, nan to nan
+Data columns (total 56 columns):
+ #   Column               Non-Null Count  Dtype  
+---  ------               --------------  -----  
+ 0   magnesium            3 non-null      float64
+ 1   potassium            3 non-null      int64  
+ 2   create_sh_ver        3 non-null      float64
+ 3   vitamin_a            3 non-null      float64
+ 4   vitamin_c            3 non-null      float64
+ 5   vitamin_d            0 non-null      float64
+ 6   vitamin_e            0 non-null      float64
+ 7   vitamin_k            3 non-null      float64
+ 8   cholesterol          0 non-null      float64
+ 9   vitamin_b12          3 non-null      object 
+ 10  start_time           0 non-null      float64
+ 11  biotin               0 non-null      float64
+ 12  phosphorus           0 non-null      float64
+ 13  copper               0 non-null      float64
+ 14  custom               0 non-null      float64
+ 15  thiamin              0 non-null      float64
+ 16  folate               0 non-null      float64
+ 17  iodine               0 non-null      float64
+ 18  niacin               3 non-null      float64
+ 19  sodium               0 non-null      float64
+ 20  molybdenum           0 non-null      float64
+ 21  folic_acid           3 non-null      int64  
+ 22  modify_sh_ver        3 non-null      float64
+ 23  dietary_fiber        3 non-null      float64
+ 24  total_fat            3 non-null      object 
+ 25  update_time          3 non-null      object 
+ 26  create_time          3 non-null      int64  
+ 27  meal_type            0 non-null      float64
+ 28  caffeine             3 non-null      float64
+ 29  monosaturated_fat    3 non-null      float64
+ 30  protein              0 non-null      float64
+ 31  manganese            3 non-null      float64
+ 32  polysaturated_fat    3 non-null      float64
+ 33  iron                 0 non-null      float64
+ 34  zinc                 0 non-null      float64
+ 35  riboflavin           3 non-null      float64
+ 36  sugar                3 non-null      object 
+ 37  title                3 non-null      float64
+ 38  added_sugar          0 non-null      float64
+ 39  calories_from_fat    3 non-null      float64
+ 40  calcium              3 non-null      float64
+ 41  calorie              3 non-null      object 
+ 42  time_offset          3 non-null      object 
+ 43  deviceuuid           0 non-null      float64
+ 44  polyunsaturated_fat  3 non-null      float64
+ 45  saturated_fat        3 non-null      float64
+ 46  trans_fat            3 non-null      object 
+ 47  pkg_name             0 non-null      float64
+ 48  selenium             0 non-null      float64
+ 49  vitamin_b6           3 non-null      float64
+ 50  carbohydrate         0 non-null      float64
+ 51  unsaturated_fat      0 non-null      float64
+ 52  chloride             0 non-null      float64
+ 53  pantothenic_acid     3 non-null      object 
+ 54  datauuid             0 non-null      float64
+ 55  chromium             0 non-null      float64
+dtypes: float64(45), int64(3), object(8)
+memory usage: 1.3+ KB
+
+ ------DF8: com.samsung.health.user_profile.20250723145868-------
+<class 'pandas.core.frame.DataFrame'>
+Index: 21 entries, kg to nan
+Data columns (total 14 columns):
+ #   Column         Non-Null Count  Dtype  
+---  ------         --------------  -----  
+ 0   text_value     13 non-null     float64
+ 1   create_sh_ver  2 non-null      float64
+ 2   float_value    14 non-null     float64
+ 3   modify_sh_ver  21 non-null     object 
+ 4   update_time    21 non-null     object 
+ 5   create_time    0 non-null      float64
+ 6   long_value     21 non-null     object 
+ 7   key            3 non-null      object 
+ 8   blob_value     1 non-null      float64
+ 9   int_value      21 non-null     object 
+ 10  deviceuuid     21 non-null     object 
+ 11  pkg_name       0 non-null      float64
+ 12  double_value   21 non-null     object 
+ 13  datauuid       0 non-null      float64
+dtypes: float64(7), object(7)
+memory usage: 2.5+ KB
+
+ ------DF9: com.samsung.health.water_intake.20250723145868-------
+<class 'pandas.core.frame.DataFrame'>
+Index: 1 entries, 2025-07-22 14:41:00.000 to 2025-07-22 14:41:00.000
+Data columns (total 13 columns):
+ #   Column           Non-Null Count  Dtype  
+---  ------           --------------  -----  
+ 0   start_time       1 non-null      float64
+ 1   amount           0 non-null      float64
+ 2   custom           1 non-null      object 
+ 3   update_time      1 non-null      object 
+ 4   create_time      0 non-null      float64
+ 5   client_data_id   0 non-null      float64
+ 6   client_data_ver  1 non-null      object 
+ 7   time_offset      1 non-null      object 
+ 8   deviceuuid       1 non-null      float64
+ 9   unit_amount      0 non-null      float64
+ 10  comment          1 non-null      object 
+ 11  pkg_name         1 non-null      object 
+ 12  datauuid         0 non-null      float64
+dtypes: float64(7), object(6)
+memory usage: 112.0+ bytes
+
+ ------DF10: com.samsung.health.weight.20250723145868-------
+<class 'pandas.core.frame.DataFrame'>
+Index: 3 entries, 13.796921 to 13.257368
+Data columns (total 25 columns):
+ #   Column                Non-Null Count  Dtype  
+---  ------                --------------  -----  
+ 0   body_fat_mass         3 non-null      int64  
+ 1   create_sh_ver         3 non-null      object 
+ 2   start_time            0 non-null      float64
+ 3   custom                3 non-null      float64
+ 4   height                3 non-null      float64
+ 5   weight                0 non-null      float64
+ 6   muscle_mass           3 non-null      int64  
+ 7   modify_sh_ver         3 non-null      object 
+ 8   update_time           3 non-null      object 
+ 9   create_time           0 non-null      float64
+ 10  client_data_id        3 non-null      float64
+ 11  skeletal_muscle       3 non-null      float64
+ 12  fat_free_mass         0 non-null      float64
+ 13  client_data_ver       3 non-null      int64  
+ 14  basal_metabolic_rate  3 non-null      object 
+ 15  time_offset           3 non-null      object 
+ 16  deviceuuid            3 non-null      float64
+ 17  skeletal_muscle_mass  0 non-null      float64
+ 18  comment               3 non-null      float64
+ 19  fat_free              3 non-null      object 
+ 20  pkg_name              3 non-null      float64
+ 21  body_fat              3 non-null      object 
+ 22  datauuid              0 non-null      float64
+ 23  vfa_level             3 non-null      float64
+ 24  total_body_water      0 non-null      float64
+dtypes: float64(15), int64(3), object(7)
+memory usage: 624.0+ bytes
+
+ ------DF11: com.samsung.shealth.activity.day_summary.20250723145868-------
+<class 'pandas.core.frame.DataFrame'>
+Index: 46 entries, 0 to 0
+Data columns (total 33 columns):
+ #   Column                      Non-Null Count  Dtype  
+---  ------                      --------------  -----  
+ 0   movement_type               46 non-null     int64  
+ 1   create_sh_ver               46 non-null     int64  
+ 2   energy_type                 46 non-null     int64  
+ 3   exercise_time               46 non-null     int64  
+ 4   step_count                  46 non-null     int64  
+ 5   exercise_calorie_target     46 non-null     int64  
+ 6   active_time                 46 non-null     int64  
+ 7   target                      46 non-null     int64  
+ 8   others_time                 46 non-null     int64  
+ 9   modify_sh_ver               46 non-null     object 
+ 10  update_time                 46 non-null     int64  
+ 11  floors_target               46 non-null     object 
+ 12  create_time                 46 non-null     float64
+ 13  floor_count                 46 non-null     int64  
+ 14  dynamic_active_time_target  46 non-null     int64  
+ 15  exercise_time_target        46 non-null     int64  
+ 16  goal                        46 non-null     int64  
+ 17  longest_active_time         46 non-null     int64  
+ 18  score                       46 non-null     int64  
+ 19  move_hourly_count           46 non-null     int64  
+ 20  duration_type               46 non-null     int64  
+ 21  move_hourly_target          46 non-null     float64
+ 22  distance                    46 non-null     int64  
+ 23  dynamic_active_time         46 non-null     float64
+ 24  calorie                     46 non-null     object 
+ 25  extra_data                  46 non-null     object 
+ 26  deviceuuid                  46 non-null     int64  
+ 27  run_time                    46 non-null     object 
+ 28  pkg_name                    46 non-null     int64  
+ 29  walk_time                   46 non-null     int64  
+ 30  longest_idle_time           46 non-null     object 
+ 31  datauuid                    46 non-null     object 
+ 32  day_time                    0 non-null      float64
+dtypes: float64(4), int64(22), object(7)
+memory usage: 12.2+ KB
+
+ ------DF12: com.samsung.shealth.activity_level.20250723145868-------
+<class 'pandas.core.frame.DataFrame'>
+Index: 1 entries, -1 to -1
+Data columns (total 8 columns):
+ #   Column          Non-Null Count  Dtype  
+---  ------          --------------  -----  
+ 0   activity_level  1 non-null      object 
+ 1   start_time      1 non-null      object 
+ 2   update_time     1 non-null      object 
+ 3   create_time     1 non-null      object 
+ 4   time_offset     1 non-null      object 
+ 5   deviceuuid      1 non-null      object 
+ 6   pkg_name        1 non-null      object 
+ 7   datauuid        0 non-null      float64
+dtypes: float64(1), object(7)
+memory usage: 72.0+ bytes
+
+ ------DF13: com.samsung.shealth.badge.20250723145868-------
+<class 'pandas.core.frame.DataFrame'>
+Index: 10 entries, 0.0 to 1.0
+Data columns (total 20 columns):
+ #   Column                       Non-Null Count  Dtype  
+---  ------                       --------------  -----  
+ 0   number_of_streak             10 non-null     object 
+ 1   start_time                   3 non-null      float64
+ 2   exercise_type                0 non-null      float64
+ 3   device_type                  10 non-null     int64  
+ 4   status                       0 non-null      float64
+ 5   sleep_coaching_session_uuid  10 non-null     object 
+ 6   update_time                  10 non-null     object 
+ 7   create_time                  0 non-null      float64
+ 8   source_pkg_name              10 non-null     object 
+ 9   key                          0 non-null      float64
+ 10  program_id                   2 non-null      float64
+ 11  is_shown                     10 non-null     object 
+ 12  time_offset                  1 non-null      object 
+ 13  extra_data                   10 non-null     object 
+ 14  deviceuuid                   10 non-null     object 
+ 15  pkg_name                     4 non-null      object 
+ 16  exercise_data_uuid           10 non-null     object 
+ 17  controller_id                10 non-null     object 
+ 18  end_time                     10 non-null     object 
+ 19  datauuid                     0 non-null      float64
+dtypes: float64(7), int64(1), object(12)
+memory usage: 1.6+ KB
+
+ ------DF14: com.samsung.shealth.best_records.20250723145868-------
+<class 'pandas.core.frame.DataFrame'>
+Index: 1 entries, nan to nan
+Data columns (total 15 columns):
+ #   Column           Non-Null Count  Dtype  
+---  ------           --------------  -----  
+ 0   source_id        1 non-null      int64  
+ 1   device_type      1 non-null      object 
+ 2   update_time      1 non-null      object 
+ 3   create_time      0 non-null      float64
+ 4   source_pkg_name  1 non-null      int64  
+ 5   date             1 non-null      int64  
+ 6   type             1 non-null      float64
+ 7   value            1 non-null      int64  
+ 8   is_shown         0 non-null      float64
+ 9   extra_data       1 non-null      int64  
+ 10  extra_type       1 non-null      object 
+ 11  deviceuuid       1 non-null      object 
+ 12  pkg_name         1 non-null      object 
+ 13  controller_id    1 non-null      object 
+ 14  datauuid         0 non-null      float64
+dtypes: float64(4), int64(5), object(6)
+memory usage: 128.0+ bytes
+
+ ------DF15: com.samsung.shealth.breathing.20250723145868-------
+<class 'pandas.core.frame.DataFrame'>
+Index: 1 entries, 20 to 20
+Data columns (total 18 columns):
+ #   Column                Non-Null Count  Dtype  
+---  ------                --------------  -----  
+ 0   duration              0 non-null      float64
+ 1   create_sh_ver         1 non-null      object 
+ 2   start_time            0 non-null      float64
+ 3   exhale_hold_duration  0 non-null      float64
+ 4   custom                0 non-null      float64
+ 5   modify_sh_ver         1 non-null      object 
+ 6   update_time           1 non-null      object 
+ 7   create_time           0 non-null      float64
+ 8   exhale_duration       0 non-null      float64
+ 9   type                  1 non-null      int64  
+ 10  cycle                 1 non-null      object 
+ 11  time_offset           1 non-null      object 
+ 12  deviceuuid            0 non-null      float64
+ 13  inhale_hold_duration  1 non-null      object 
+ 14  pkg_name              1 non-null      object 
+ 15  end_time              1 non-null      object 
+ 16  datauuid              0 non-null      float64
+ 17  inhale_duration       0 non-null      float64
+dtypes: float64(9), int64(1), object(8)
+memory usage: 152.0+ bytes
+
+ ------DF16: com.samsung.shealth.calories_burned.details.20250723145868-------
+<class 'pandas.core.frame.DataFrame'>
+Index: 46 entries, nan to nan
+Data columns (total 17 columns):
+ #   Column                                              Non-Null Count  Dtype  
+---  ------                                              --------------  -----  
+ 0   active_calories_goal                                0 non-null      float64
+ 1   version                                             46 non-null     object 
+ 2   extra_data                                          0 non-null      float64
+ 3   exercise_calories                                   46 non-null     float64
+ 4   total_exercise_calories                             46 non-null     int64  
+ 5   com.samsung.shealth.calories_burned.create_sh_ver   46 non-null     float64
+ 6   com.samsung.shealth.calories_burned.tef_calorie     46 non-null     int64  
+ 7   com.samsung.shealth.calories_burned.active_time     46 non-null     float64
+ 8   com.samsung.shealth.calories_burned.rest_calorie    46 non-null     int64  
+ 9   com.samsung.shealth.calories_burned.modify_sh_ver   46 non-null     object 
+ 10  com.samsung.shealth.calories_burned.update_time     46 non-null     object 
+ 11  com.samsung.shealth.calories_burned.create_time     46 non-null     float64
+ 12  com.samsung.shealth.calories_burned.active_calorie  46 non-null     object 
+ 13  com.samsung.shealth.calories_burned.deviceuuid      46 non-null     object 
+ 14  com.samsung.shealth.calories_burned.pkg_name        46 non-null     object 
+ 15  com.samsung.shealth.calories_burned.datauuid        46 non-null     int64  
+ 16  com.samsung.shealth.calories_burned.day_time        0 non-null      float64
+dtypes: float64(7), int64(4), object(6)
+memory usage: 6.5+ KB
+
+ ------DF17: com.samsung.shealth.exercise.20250723145868-------
+<class 'pandas.core.frame.DataFrame'>
+Index: 22 entries, nan to 743c64fe-f3ed-4fc3-b8b5-87174b560013.live_data_internal.json
+Data columns (total 73 columns):
+ #   Column                                             Non-Null Count  Dtype  
+---  ------                                             --------------  -----  
+ 0   live_data_internal                                 4 non-null      float64
+ 1   mission_value                                      5 non-null      float64
+ 2   race_target                                        3 non-null      object 
+ 3   subset_data                                        1 non-null      float64
+ 4   start_longitude                                    0 non-null      float64
+ 5   routine_datauuid                                   5 non-null      float64
+ 6   total_calorie                                      10 non-null     float64
+ 7   completion_status                                  0 non-null      float64
+ 8   pace_info_id                                       1 non-null      float64
+ 9   activity_type                                      0 non-null      float64
+ 10  pace_live_data                                     5 non-null      object 
+ 11  sensing_status                                     11 non-null     float64
+ 12  source_type                                        10 non-null     float64
+ 13  mission_type                                       0 non-null      float64
+ 14  ftp                                                7 non-null      float64
+ 15  tracking_status                                    0 non-null      float64
+ 16  program_id                                         0 non-null      float64
+ 17  title                                              1 non-null      float64
+ 18  reward_status                                      0 non-null      float64
+ 19  heart_rate_sample_count                            1 non-null      float64
+ 20  start_latitude                                     1 non-null      float64
+ 21  mission_extra_value                                0 non-null      float64
+ 22  program_schedule_id                                0 non-null      float64
+ 23  heart_rate_deviceuuid                              1 non-null      object 
+ 24  location_data_internal                             0 non-null      float64
+ 25  custom_id                                          0 non-null      float64
+ 26  additional_internal                                22 non-null     int64  
+ 27  com.samsung.health.exercise.duration               0 non-null      float64
+ 28  com.samsung.health.exercise.additional             22 non-null     int64  
+ 29  com.samsung.health.exercise.create_sh_ver          0 non-null      float64
+ 30  com.samsung.health.exercise.mean_caloricburn_rate  1 non-null      object 
+ 31  com.samsung.health.exercise.location_data          22 non-null     object 
+ 32  com.samsung.health.exercise.start_time             22 non-null     int64  
+ 33  com.samsung.health.exercise.exercise_type          0 non-null      float64
+ 34  com.samsung.health.exercise.custom                 2 non-null      float64
+ 35  com.samsung.health.exercise.max_altitude           2 non-null      float64
+ 36  com.samsung.health.exercise.incline_distance       4 non-null      float64
+ 37  com.samsung.health.exercise.mean_heart_rate        22 non-null     int64  
+ 38  com.samsung.health.exercise.count_type             0 non-null      float64
+ 39  com.samsung.health.exercise.mean_rpm               2 non-null      float64
+ 40  com.samsung.health.exercise.min_altitude           22 non-null     int64  
+ 41  com.samsung.health.exercise.modify_sh_ver          4 non-null      float64
+ 42  com.samsung.health.exercise.max_heart_rate         22 non-null     object 
+ 43  com.samsung.health.exercise.update_time            22 non-null     object 
+ 44  com.samsung.health.exercise.create_time            0 non-null      float64
+ 45  com.samsung.health.exercise.client_data_id         0 non-null      float64
+ 46  com.samsung.health.exercise.max_power              19 non-null     float64
+ 47  com.samsung.health.exercise.max_speed              1 non-null      float64
+ 48  com.samsung.health.exercise.mean_cadence           4 non-null      float64
+ 49  com.samsung.health.exercise.min_heart_rate         0 non-null      float64
+ 50  com.samsung.health.exercise.client_data_ver        22 non-null     int64  
+ 51  com.samsung.health.exercise.count                  19 non-null     float64
+ 52  com.samsung.health.exercise.distance               0 non-null      float64
+ 53  com.samsung.health.exercise.max_caloricburn_rate   22 non-null     float64
+ 54  com.samsung.health.exercise.calorie                1 non-null      float64
+ 55  com.samsung.health.exercise.max_cadence            2 non-null      float64
+ 56  com.samsung.health.exercise.decline_distance       1 non-null      float64
+ 57  com.samsung.health.exercise.vo2_max                22 non-null     object 
+ 58  com.samsung.health.exercise.time_offset            22 non-null     object 
+ 59  com.samsung.health.exercise.deviceuuid             0 non-null      float64
+ 60  com.samsung.health.exercise.max_rpm                0 non-null      float64
+ 61  com.samsung.health.exercise.comment                22 non-null     object 
+ 62  com.samsung.health.exercise.live_data              0 non-null      float64
+ 63  com.samsung.health.exercise.mean_power             19 non-null     float64
+ 64  com.samsung.health.exercise.mean_speed             22 non-null     object 
+ 65  com.samsung.health.exercise.pkg_name               2 non-null      float64
+ 66  com.samsung.health.exercise.altitude_gain          1 non-null      float64
+ 67  com.samsung.health.exercise.altitude_loss          0 non-null      float64
+ 68  com.samsung.health.exercise.exercise_custom_type   0 non-null      float64
+ 69  com.samsung.health.exercise.auxiliary_devices      22 non-null     object 
+ 70  com.samsung.health.exercise.end_time               22 non-null     object 
+ 71  com.samsung.health.exercise.datauuid               1 non-null      float64
+ 72  com.samsung.health.exercise.sweat_loss             0 non-null      float64
+dtypes: float64(54), int64(6), object(13)
+memory usage: 12.7+ KB
+
+ ------DF18: com.samsung.shealth.exercise.hr_zone.settings.20250723145868-------
+<class 'pandas.core.frame.DataFrame'>
+Index: 1 entries, 62981551 to 62981551
+Data columns (total 12 columns):
+ #   Column         Non-Null Count  Dtype  
+---  ------         --------------  -----  
+ 0   create_sh_ver  1 non-null      object 
+ 1   start_time     1 non-null      int64  
+ 2   modify_sh_ver  1 non-null      object 
+ 3   update_time    1 non-null      object 
+ 4   create_time    1 non-null      int64  
+ 5   version        1 non-null      int64  
+ 6   zone_type      1 non-null      object 
+ 7   time_offset    1 non-null      object 
+ 8   deviceuuid     1 non-null      int64  
+ 9   exercise_id    1 non-null      object 
+ 10  pkg_name       1 non-null      object 
+ 11  datauuid       0 non-null      float64
+dtypes: float64(1), int64(4), object(7)
+memory usage: 104.0+ bytes
+
+ ------DF19: com.samsung.shealth.exercise.periodization_training_schedule.20250723145868-------
+<class 'pandas.core.frame.DataFrame'>
+Index: 1 entries, 63020270 to 63020270
+Data columns (total 14 columns):
+ #   Column         Non-Null Count  Dtype  
+---  ------         --------------  -----  
+ 0   create_sh_ver  1 non-null      object 
+ 1   start_time     1 non-null      object 
+ 2   coach_id       1 non-null      int64  
+ 3   status         1 non-null      object 
+ 4   schedule       1 non-null      int64  
+ 5   modify_sh_ver  1 non-null      object 
+ 6   update_time    1 non-null      object 
+ 7   create_time    1 non-null      int64  
+ 8   type           1 non-null      object 
+ 9   time_offset    1 non-null      object 
+ 10  deviceuuid     1 non-null      object 
+ 11  pkg_name       1 non-null      object 
+ 12  program_uuid   1 non-null      object 
+ 13  datauuid       0 non-null      float64
+dtypes: float64(1), int64(3), object(10)
+memory usage: 120.0+ bytes
+
+ ------DF20: com.samsung.shealth.exercise.recovery_heart_rate.20250723145868-------
+<class 'pandas.core.frame.DataFrame'>
+Index: 1 entries, 62981551 to 62981551
+Data columns (total 12 columns):
+ #   Column         Non-Null Count  Dtype  
+---  ------         --------------  -----  
+ 0   create_sh_ver  1 non-null      object 
+ 1   start_time     1 non-null      int64  
+ 2   modify_sh_ver  1 non-null      object 
+ 3   update_time    1 non-null      object 
+ 4   create_time    1 non-null      object 
+ 5   time_offset    1 non-null      object 
+ 6   deviceuuid     1 non-null      object 
+ 7   exercise_id    1 non-null      object 
+ 8   pkg_name       1 non-null      object 
+ 9   end_time       1 non-null      object 
+ 10  datauuid       1 non-null      object 
+ 11  heart_rate     0 non-null      float64
+dtypes: float64(1), int64(1), object(10)
+memory usage: 104.0+ bytes
+
+ ------DF21: com.samsung.shealth.exercise.weather.20250723145868-------
+<class 'pandas.core.frame.DataFrame'>
+Index: 1 entries, nan to nan
+Data columns (total 25 columns):
+ #   Column             Non-Null Count  Dtype  
+---  ------             --------------  -----  
+ 0   uv_index           0 non-null      float64
+ 1   sunset_time        1 non-null      object 
+ 2   start_time         1 non-null      float64
+ 3   latitude           0 non-null      float64
+ 4   custom             1 non-null      object 
+ 5   wind_direction     1 non-null      object 
+ 6   phrase             0 non-null      float64
+ 7   sundown_time       1 non-null      int64  
+ 8   temperature_scale  1 non-null      object 
+ 9   content_provider   1 non-null      object 
+ 10  update_time        1 non-null      object 
+ 11  create_time        1 non-null      int64  
+ 12  type               1 non-null      float64
+ 13  longitude          1 non-null      float64
+ 14  temperature        1 non-null      int64  
+ 15  humidity           1 non-null      object 
+ 16  time_offset        1 non-null      object 
+ 17  deviceuuid         1 non-null      object 
+ 18  exercise_id        1 non-null      object 
+ 19  pkg_name           1 non-null      object 
+ 20  wind_speed_unit    0 non-null      float64
+ 21  forecast_time      1 non-null      float64
+ 22  wind_speed         1 non-null      int64  
+ 23  icon_info_id       1 non-null      object 
+ 24  datauuid           0 non-null      float64
+dtypes: float64(9), int64(4), object(12)
+memory usage: 208.0+ bytes
+
+ ------DF22: com.samsung.shealth.food_favorite.20250723145868-------
+<class 'pandas.core.frame.DataFrame'>
+Index: 13 entries, 1.0 to 0.0
+Data columns (total 12 columns):
+ #   Column        Non-Null Count  Dtype  
+---  ------        --------------  -----  
+ 0   amount        13 non-null     int64  
+ 1   food_type     13 non-null     object 
+ 2   update_time   13 non-null     object 
+ 3   create_time   13 non-null     object 
+ 4   name          6 non-null      float64
+ 5   unit          13 non-null     object 
+ 6   favoriteid    13 non-null     float64
+ 7   calorie       13 non-null     object 
+ 8   deviceuuid    13 non-null     object 
+ 9   pkg_name      13 non-null     object 
+ 10  datauuid      13 non-null     object 
+ 11  food_info_id  0 non-null      float64
+dtypes: float64(3), int64(1), object(8)
+memory usage: 1.3+ KB
+
+ ------DF23: com.samsung.shealth.food_frequent.20250723145868-------
+<class 'pandas.core.frame.DataFrame'>
+Index: 5 entries, 0.0 to 0.0
+Data columns (total 12 columns):
+ #   Column                Non-Null Count  Dtype  
+---  ------                --------------  -----  
+ 0   eveningsnack_count    5 non-null      object 
+ 1   update_time           5 non-null      object 
+ 2   create_time           5 non-null      float64
+ 3   morningsnack_count    5 non-null      float64
+ 4   dinner_count          5 non-null      float64
+ 5   breakfast_count       5 non-null      object 
+ 6   deviceuuid            5 non-null      object 
+ 7   pkg_name              5 non-null      float64
+ 8   afternoonsnack_count  5 non-null      object 
+ 9   datauuid              5 non-null      object 
+ 10  food_info_id          5 non-null      float64
+ 11  lunch_count           0 non-null      float64
+dtypes: float64(6), object(6)
+memory usage: 520.0+ bytes
+
+ ------DF24: com.samsung.shealth.hsp.references.20250723145868-------
+<class 'pandas.core.frame.DataFrame'>
+Index: 70 entries, f64536a4-d97a-4541-a05f-038216a2e0b6 to bb5bd69f-a8d2-4a98-8f17-265415c6208c
+Data columns (total 8 columns):
+ #   Column             Non-Null Count  Dtype  
+---  ------             --------------  -----  
+ 0   hsp_id             70 non-null     object 
+ 1   shealth_id         70 non-null     object 
+ 2   update_time        70 non-null     object 
+ 3   create_time        70 non-null     int64  
+ 4   shealth_data_type  70 non-null     object 
+ 5   deviceuuid         70 non-null     object 
+ 6   pkg_name           70 non-null     object 
+ 7   datauuid           0 non-null      float64
+dtypes: float64(1), int64(1), object(6)
+memory usage: 4.9+ KB
+
+ ------DF25: com.samsung.shealth.insight.message_notification.20250723145868-------
+<class 'pandas.core.frame.DataFrame'>
+Index: 2 entries, TOP_Watch8_1007_IN to TOP_Watch8_1007_IN
+Data columns (total 10 columns):
+ #   Column       Non-Null Count  Dtype  
+---  ------       --------------  -----  
+ 0   message_id   2 non-null      int64  
+ 1   device_type  2 non-null      int64  
+ 2   status       2 non-null      object 
+ 3   update_time  2 non-null      object 
+ 4   create_time  2 non-null      object 
+ 5   time_offset  2 non-null      object 
+ 6   deviceuuid   2 non-null      object 
+ 7   pkg_name     0 non-null      float64
+ 8   issue_time   2 non-null      object 
+ 9   datauuid     0 non-null      float64
+dtypes: float64(2), int64(2), object(6)
+memory usage: 176.0+ bytes
+
+ ------DF26: com.samsung.shealth.mood.20250723145868-------
+<class 'pandas.core.frame.DataFrame'>
+Index: 1 entries, 63030110 to 63030110
+Data columns (total 16 columns):
+ #   Column         Non-Null Count  Dtype  
+---  ------         --------------  -----  
+ 0   create_sh_ver  1 non-null      object 
+ 1   start_time     0 non-null      float64
+ 2   factors        1 non-null      int64  
+ 3   mood_type      1 non-null      int64  
+ 4   modify_sh_ver  1 non-null      object 
+ 5   update_time    1 non-null      object 
+ 6   create_time    1 non-null      int64  
+ 7   data_version   0 non-null      float64
+ 8   notes          0 non-null      float64
+ 9   place          1 non-null      object 
+ 10  time_offset    1 non-null      object 
+ 11  deviceuuid     0 non-null      float64
+ 12  company        1 non-null      object 
+ 13  pkg_name       0 non-null      float64
+ 14  emotions       1 non-null      object 
+ 15  datauuid       0 non-null      float64
+dtypes: float64(6), int64(3), object(7)
+memory usage: 136.0+ bytes
+
+ ------DF27: com.samsung.shealth.preferences.20250723145868-------
+<class 'pandas.core.frame.DataFrame'>
+Index: 73 entries, nan to nan
+Data columns (total 13 columns):
+ #   Column        Non-Null Count  Dtype  
+---  ------        --------------  -----  
+ 0   text_value    34 non-null     object 
+ 1   service_id    2 non-null      float64
+ 2   float_value   73 non-null     object 
+ 3   update_time   73 non-null     object 
+ 4   create_time   20 non-null     float64
+ 5   long_value    0 non-null      float64
+ 6   tag           6 non-null      object 
+ 7   blob_value    31 non-null     float64
+ 8   int_value     73 non-null     object 
+ 9   deviceuuid    73 non-null     object 
+ 10  pkg_name      0 non-null      float64
+ 11  double_value  73 non-null     object 
+ 12  datauuid      0 non-null      float64
+dtypes: float64(6), object(7)
+memory usage: 8.0+ KB
+
+ ------DF28: com.samsung.shealth.service_preferences.20250723145868-------
+<class 'pandas.core.frame.DataFrame'>
+Index: 6 entries, nan to nan
+Data columns (total 14 columns):
+ #   Column        Non-Null Count  Dtype  
+---  ------        --------------  -----  
+ 0   text_value    5 non-null      object 
+ 1   service_id    0 non-null      float64
+ 2   float_value   6 non-null      object 
+ 3   update_time   6 non-null      object 
+ 4   create_time   1 non-null      float64
+ 5   long_value    6 non-null      object 
+ 6   key           0 non-null      float64
+ 7   tag           0 non-null      float64
+ 8   blob_value    3 non-null      float64
+ 9   int_value     6 non-null      object 
+ 10  deviceuuid    6 non-null      object 
+ 11  pkg_name      0 non-null      float64
+ 12  double_value  6 non-null      object 
+ 13  datauuid      0 non-null      float64
+dtypes: float64(7), object(7)
+memory usage: 720.0+ bytes
+
+ ------DF29: com.samsung.shealth.sleep.20250723145868-------
+<class 'pandas.core.frame.DataFrame'>
+Index: 1 entries, nan to nan
+Data columns (total 61 columns):
+ #   Column                                    Non-Null Count  Dtype  
+---  ------                                    --------------  -----  
+ 0   total_sleep_time_weight                   0 non-null      float64
+ 1   original_efficiency                       0 non-null      float64
+ 2   mental_recovery                           0 non-null      float64
+ 3   wake_score                                0 non-null      float64
+ 4   factor_01                                 0 non-null      float64
+ 5   factor_02                                 0 non-null      float64
+ 6   factor_03                                 0 non-null      float64
+ 7   factor_04                                 0 non-null      float64
+ 8   factor_05                                 0 non-null      float64
+ 9   factor_06                                 0 non-null      float64
+ 10  factor_07                                 0 non-null      float64
+ 11  factor_08                                 0 non-null      float64
+ 12  factor_09                                 0 non-null      float64
+ 13  factor_10                                 0 non-null      float64
+ 14  deep_score                                0 non-null      float64
+ 15  integrated_id                             0 non-null      float64
+ 16  latency_weight                            1 non-null      int64  
+ 17  has_sleep_data                            0 non-null      float64
+ 18  bedtime_detection_delay                   0 non-null      float64
+ 19  sleep_efficiency_with_latency             0 non-null      float64
+ 20  wakeup_time_detection_delay               0 non-null      float64
+ 21  total_rem_duration                        0 non-null      float64
+ 22  combined_id                               0 non-null      float64
+ 23  sleep_type                                0 non-null      float64
+ 24  sleep_latency                             0 non-null      float64
+ 25  data_version                              0 non-null      float64
+ 26  latency_score                             0 non-null      float64
+ 27  deep_weight                               0 non-null      float64
+ 28  rem_weight                                0 non-null      float64
+ 29  physical_recovery                         0 non-null      float64
+ 30  original_wake_up_time                     0 non-null      float64
+ 31  movement_awakening                        0 non-null      float64
+ 32  is_integrated                             0 non-null      float64
+ 33  original_bed_time                         1 non-null      int64  
+ 34  goal_bed_time                             1 non-null      int64  
+ 35  quality                                   0 non-null      float64
+ 36  extra_data                                0 non-null      float64
+ 37  wake_weight                               0 non-null      float64
+ 38  rem_score                                 1 non-null      int64  
+ 39  goal_wake_up_time                         0 non-null      float64
+ 40  sleep_cycle                               0 non-null      float64
+ 41  total_light_duration                      1 non-null      float64
+ 42  efficiency                                0 non-null      float64
+ 43  sleep_score                               0 non-null      float64
+ 44  sleep_duration                            0 non-null      float64
+ 45  stage_analyzed_type                       0 non-null      float64
+ 46  total_sleep_time_score                    1 non-null      int64  
+ 47  com.samsung.health.sleep.create_sh_ver    1 non-null      object 
+ 48  com.samsung.health.sleep.start_time       0 non-null      float64
+ 49  com.samsung.health.sleep.custom           1 non-null      int64  
+ 50  com.samsung.health.sleep.modify_sh_ver    1 non-null      object 
+ 51  com.samsung.health.sleep.update_time      1 non-null      object 
+ 52  com.samsung.health.sleep.create_time      0 non-null      float64
+ 53  com.samsung.health.sleep.client_data_id   0 non-null      float64
+ 54  com.samsung.health.sleep.client_data_ver  1 non-null      object 
+ 55  com.samsung.health.sleep.time_offset      1 non-null      object 
+ 56  com.samsung.health.sleep.deviceuuid       0 non-null      float64
+ 57  com.samsung.health.sleep.comment          1 non-null      object 
+ 58  com.samsung.health.sleep.pkg_name         1 non-null      object 
+ 59  com.samsung.health.sleep.end_time         1 non-null      object 
+ 60  com.samsung.health.sleep.datauuid         0 non-null      float64
+dtypes: float64(47), int64(6), object(8)
+memory usage: 496.0+ bytes
+
+ ------DF30: com.samsung.shealth.social.service_status.20250723145868-------
+<class 'pandas.core.frame.DataFrame'>
+Index: 3 entries, 0 to 100
+Data columns (total 7 columns):
+ #   Column        Non-Null Count  Dtype  
+---  ------        --------------  -----  
+ 0   status        3 non-null      object 
+ 1   update_time   3 non-null      object 
+ 2   create_time   3 non-null      int64  
+ 3   service_type  3 non-null      object 
+ 4   deviceuuid    3 non-null      object 
+ 5   pkg_name      3 non-null      object 
+ 6   datauuid      0 non-null      float64
+dtypes: float64(1), int64(1), object(5)
+memory usage: 192.0+ bytes
+
+ ------DF31: com.samsung.shealth.step_daily_trend.20250723145868-------
+<class 'pandas.core.frame.DataFrame'>
+Index: 39 entries, c1fd30e4-b218-4701-b6a1-ef568e63bee0.binning_data.json to 4909ae4c-094d-4aae-803c-3aa675eec3fc.binning_data.json
+Data columns (total 13 columns):
+ #   Column           Non-Null Count  Dtype  
+---  ------           --------------  -----  
+ 0   binning_data     39 non-null     object 
+ 1   update_time      39 non-null     object 
+ 2   create_time      39 non-null     object 
+ 3   source_pkg_name  39 non-null     int64  
+ 4   source_type      39 non-null     int64  
+ 5   count            39 non-null     float64
+ 6   speed            39 non-null     float64
+ 7   distance         39 non-null     float64
+ 8   calorie          39 non-null     object 
+ 9   deviceuuid       39 non-null     object 
+ 10  pkg_name         39 non-null     object 
+ 11  datauuid         39 non-null     int64  
+ 12  day_time         0 non-null      float64
+dtypes: float64(4), int64(3), object(6)
+memory usage: 4.3+ KB
+
+ ------DF32: com.samsung.shealth.stress.20250723145868-------
+<class 'pandas.core.frame.DataFrame'>
+Index: 23 entries, 62800471 to 62981551
+Data columns (total 18 columns):
+ #   Column         Non-Null Count  Dtype  
+---  ------         --------------  -----  
+ 0   create_sh_ver  23 non-null     object 
+ 1   start_time     0 non-null      float64
+ 2   custom         20 non-null     object 
+ 3   binning_data   23 non-null     int64  
+ 4   tag_id         23 non-null     int64  
+ 5   modify_sh_ver  23 non-null     object 
+ 6   update_time    23 non-null     object 
+ 7   create_time    20 non-null     float64
+ 8   max            20 non-null     float64
+ 9   min            23 non-null     float64
+ 10  score          0 non-null      float64
+ 11  algorithm      23 non-null     object 
+ 12  time_offset    23 non-null     object 
+ 13  deviceuuid     0 non-null      float64
+ 14  comment        23 non-null     object 
+ 15  pkg_name       23 non-null     object 
+ 16  end_time       23 non-null     object 
+ 17  datauuid       0 non-null      float64
+dtypes: float64(7), int64(2), object(9)
+memory usage: 3.4+ KB
+
+ ------DF33: com.samsung.shealth.stress.histogram.20250723145868-------
+<class 'pandas.core.frame.DataFrame'>
+Index: 1 entries, 2025-07-23 08:03:40.556 to 2025-07-23 08:03:40.556
+Data columns (total 8 columns):
+ #   Column       Non-Null Count  Dtype  
+---  ------       --------------  -----  
+ 0   update_time  1 non-null      object 
+ 1   create_time  1 non-null      int64  
+ 2   base_hr      1 non-null      int64  
+ 3   decay_time   1 non-null      object 
+ 4   deviceuuid   1 non-null      object 
+ 5   pkg_name     1 non-null      object 
+ 6   histogram    1 non-null      object 
+ 7   datauuid     0 non-null      float64
+dtypes: float64(1), int64(2), object(5)
+memory usage: 72.0+ bytes
+
+ ------DF34: com.samsung.shealth.tracker.floors_day_summary.20250723145868-------
+<class 'pandas.core.frame.DataFrame'>
+Index: 1 entries, 63020270 to 63020270
+Data columns (total 11 columns):
+ #   Column         Non-Null Count  Dtype  
+---  ------         --------------  -----  
+ 0   create_sh_ver  1 non-null      object 
+ 1   binning_data   1 non-null      int64  
+ 2   modify_sh_ver  1 non-null      object 
+ 3   update_time    1 non-null      object 
+ 4   create_time    1 non-null      int64  
+ 5   floor_count    1 non-null      int64  
+ 6   version_code   1 non-null      object 
+ 7   deviceuuid     1 non-null      object 
+ 8   pkg_name       1 non-null      object 
+ 9   datauuid       1 non-null      int64  
+ 10  day_time       0 non-null      float64
+dtypes: float64(1), int64(4), object(6)
+memory usage: 96.0+ bytes
+
+ ------DF35: com.samsung.shealth.tracker.heart_rate.20250723145868-------
+<class 'pandas.core.frame.DataFrame'>
+Index: 30 entries, nan to nan
+Data columns (total 21 columns):
+ #   Column                                          Non-Null Count  Dtype  
+---  ------                                          --------------  -----  
+ 0   source                                          30 non-null     int64  
+ 1   tag_id                                          30 non-null     int64  
+ 2   com.samsung.health.heart_rate.create_sh_ver     30 non-null     int64  
+ 3   com.samsung.health.heart_rate.heart_beat_count  30 non-null     object 
+ 4   com.samsung.health.heart_rate.start_time        0 non-null      float64
+ 5   com.samsung.health.heart_rate.custom            21 non-null     object 
+ 6   com.samsung.health.heart_rate.binning_data      30 non-null     int64  
+ 7   com.samsung.health.heart_rate.modify_sh_ver     30 non-null     object 
+ 8   com.samsung.health.heart_rate.update_time       30 non-null     object 
+ 9   com.samsung.health.heart_rate.create_time       0 non-null      float64
+ 10  com.samsung.health.heart_rate.client_data_id    21 non-null     float64
+ 11  com.samsung.health.heart_rate.max               21 non-null     float64
+ 12  com.samsung.health.heart_rate.min               0 non-null      float64
+ 13  com.samsung.health.heart_rate.client_data_ver   30 non-null     object 
+ 14  com.samsung.health.heart_rate.time_offset       30 non-null     object 
+ 15  com.samsung.health.heart_rate.deviceuuid        0 non-null      float64
+ 16  com.samsung.health.heart_rate.comment           30 non-null     object 
+ 17  com.samsung.health.heart_rate.pkg_name          30 non-null     object 
+ 18  com.samsung.health.heart_rate.end_time          30 non-null     object 
+ 19  com.samsung.health.heart_rate.datauuid          30 non-null     float64
+ 20  com.samsung.health.heart_rate.heart_rate        0 non-null      float64
+dtypes: float64(8), int64(4), object(9)
+memory usage: 5.2+ KB
+
+ ------DF36: com.samsung.shealth.tracker.oxygen_saturation.20250723145868-------
+<class 'pandas.core.frame.DataFrame'>
+Index: 4 entries, nan to nan
+Data columns (total 24 columns):
+ #   Column                                                Non-Null Count  Dtype  
+---  ------                                                --------------  -----  
+ 0   integrated_id                                         0 non-null      float64
+ 1   source                                                4 non-null      int64  
+ 2   tag_id                                                0 non-null      float64
+ 3   coverage_rate                                         4 non-null      int64  
+ 4   com.samsung.health.oxygen_saturation.create_sh_ver    4 non-null      object 
+ 5   com.samsung.health.oxygen_saturation.start_time       0 non-null      float64
+ 6   com.samsung.health.oxygen_saturation.custom           4 non-null      int64  
+ 7   com.samsung.health.oxygen_saturation.modify_sh_ver    4 non-null      object 
+ 8   com.samsung.health.oxygen_saturation.update_time      4 non-null      object 
+ 9   com.samsung.health.oxygen_saturation.create_time      0 non-null      float64
+ 10  com.samsung.health.oxygen_saturation.client_data_id   0 non-null      float64
+ 11  com.samsung.health.oxygen_saturation.low_duration     0 non-null      float64
+ 12  com.samsung.health.oxygen_saturation.binning          0 non-null      float64
+ 13  com.samsung.health.oxygen_saturation.max              0 non-null      float64
+ 14  com.samsung.health.oxygen_saturation.min              4 non-null      float64
+ 15  com.samsung.health.oxygen_saturation.spo2             0 non-null      float64
+ 16  com.samsung.health.oxygen_saturation.client_data_ver  4 non-null      object 
+ 17  com.samsung.health.oxygen_saturation.time_offset      4 non-null      object 
+ 18  com.samsung.health.oxygen_saturation.deviceuuid       0 non-null      float64
+ 19  com.samsung.health.oxygen_saturation.comment          4 non-null      object 
+ 20  com.samsung.health.oxygen_saturation.pkg_name         4 non-null      object 
+ 21  com.samsung.health.oxygen_saturation.end_time         4 non-null      object 
+ 22  com.samsung.health.oxygen_saturation.datauuid         4 non-null      float64
+ 23  com.samsung.health.oxygen_saturation.heart_rate       0 non-null      float64
+dtypes: float64(13), int64(3), object(8)
+memory usage: 800.0+ bytes
+
+ ------DF37: com.samsung.shealth.tracker.pedometer_day_summary.20250723145868-------
+<class 'pandas.core.frame.DataFrame'>
+Index: 39 entries, 63020270 to 63030110
+Data columns (total 21 columns):
+ #   Column               Non-Null Count  Dtype  
+---  ------               --------------  -----  
+ 0   create_sh_ver        39 non-null     int64  
+ 1   step_count           39 non-null     object 
+ 2   binning_data         39 non-null     int64  
+ 3   active_time          39 non-null     int64  
+ 4   recommendation       39 non-null     int64  
+ 5   modify_sh_ver        39 non-null     int64  
+ 6   run_step_count       39 non-null     object 
+ 7   update_time          39 non-null     object 
+ 8   source_package_name  39 non-null     object 
+ 9   create_time          18 non-null     object 
+ 10  source_info          39 non-null     float64
+ 11  speed                39 non-null     float64
+ 12  distance             39 non-null     float64
+ 13  calorie              39 non-null     int64  
+ 14  walk_step_count      39 non-null     object 
+ 15  deviceuuid           39 non-null     object 
+ 16  pkg_name             39 non-null     int64  
+ 17  healthy_step         39 non-null     object 
+ 18  achievement          39 non-null     object 
+ 19  datauuid             39 non-null     int64  
+ 20  day_time             0 non-null      float64
+dtypes: float64(4), int64(8), object(9)
+memory usage: 6.7+ KB
+
+ ------DF38: com.samsung.shealth.tracker.pedometer_step_count.20250723145868-------
+<class 'pandas.core.frame.DataFrame'>
+Index: 598 entries, 9530 to 18640
+Data columns (total 18 columns):
+ #   Column                                              Non-Null Count  Dtype  
+---  ------                                              --------------  -----  
+ 0   duration                                            598 non-null    int64  
+ 1   version_code                                        598 non-null    int64  
+ 2   run_step                                            598 non-null    int64  
+ 3   walk_step                                           598 non-null    object 
+ 4   com.samsung.health.step_count.start_time            0 non-null      float64
+ 5   com.samsung.health.step_count.sample_position_type  0 non-null      float64
+ 6   com.samsung.health.step_count.custom                598 non-null    object 
+ 7   com.samsung.health.step_count.update_time           598 non-null    object 
+ 8   com.samsung.health.step_count.create_time           598 non-null    int64  
+ 9   com.samsung.health.step_count.count                 598 non-null    float64
+ 10  com.samsung.health.step_count.speed                 598 non-null    float64
+ 11  com.samsung.health.step_count.distance              598 non-null    float64
+ 12  com.samsung.health.step_count.calorie               598 non-null    object 
+ 13  com.samsung.health.step_count.time_offset           598 non-null    object 
+ 14  com.samsung.health.step_count.deviceuuid            598 non-null    object 
+ 15  com.samsung.health.step_count.pkg_name              598 non-null    object 
+ 16  com.samsung.health.step_count.end_time              598 non-null    object 
+ 17  com.samsung.health.step_count.datauuid              0 non-null      float64
+dtypes: float64(6), int64(4), object(8)
+memory usage: 88.8+ KB
