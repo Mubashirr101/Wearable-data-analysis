@@ -55,10 +55,10 @@ def infer_sql_type(dtype,series=None):
     else:
         return "TEXT"
     
-from datetime import datetime
    
 def create_table(cursor,table_name,df):
     cols =[]
+    df = df.where(pd.notnull(df), None)  # ensure NaT/NaN won't break SQL inserts    
     # taking out cols from dataframe
     for col in df.columns:
         #finding dtypes of cols
@@ -81,24 +81,49 @@ def insert_data(cursor,table_name,df):
     for row in df.itertuples(index = False, name = None):
         cursor.execute(insert_query,row)
 
+# clean csv by removing railing commas and metadata
+def clean_samsung_csv(path):
+    from io import StringIO
+    cleaned_lines = []
+    with open(path, 'r', encoding='utf-8') as f:
+        for i, line in enumerate(f):
+            if i == 0:
+                continue  # Skip metadata
+            line = line.rstrip('\n').rstrip(',')  # Clean trailing comma
+            cleaned_lines.append(line)
+    return pd.read_csv(StringIO('\n'.join(cleaned_lines)))
+
 # removing suffixes and timestamps from the csv filenames
 def clean_tbl_name(table_name):
     return re.sub(r'^com\.samsung\.s?health\.','',re.sub(r'\.\d{14}$','',table_name)).replace(".","_")
 
 def parse_datetime_custom(val):
-    try:
-        # Try parsing as datetime string
-        return datetime.strptime(val.strip(), "%d-%m-%Y %I:%M:%S %p")
-    except Exception as e1:
+    if pd.isnull(val):
+        return pd.NaT
+    
+    val = str(val).strip()
+    datetime_formats = [
+        "%d-%m-%Y %I:%M:%S %p", # 17-07-2025 01:17:15 PM
+        "%Y-%m-%d %H:%M:%S.%f",  #2025-07-17 01:17:15.715
+        "%Y-%m-%d %H:%M:%S",   # fallback: 2025-07-17 01:17:15
+    ]
+
+    for fmt in datetime_formats:
         try:
-            # Try parsing as integer timestamp (in seconds)
-            if str(val).isdigit():
-                return pd.to_datetime(int(val), unit='s')
-            else:
-                raise ValueError("Not a valid int timestamp")
-        except Exception as e2:
-            print(f"[DEBUG] failed to parse datetime or int for val: {val} ({e1}; {e2})")
-            return pd.NaT
+            # Try parsing as datetime string
+            return datetime.strptime(val,fmt)
+        except Exception:
+            continue
+
+    try:
+        # Try parsing as integer timestamp (in seconds)
+        if val.isdigit():
+            return pd.to_datetime(int(val), unit='s')
+    except Exception as e:
+        pass
+
+    # returning val as string as fallback
+    return val
 
 
 def run_etl(data_folder):
@@ -110,24 +135,27 @@ def run_etl(data_folder):
         try:
             table_name = os.path.splitext(os.path.basename(file_path))[0].lower()
             cleaned_tbl_name = clean_tbl_name(table_name)
-
-            df = pd.read_csv(file_path,skiprows=1) # skipping metadata in 1st row
-            df = df.loc[:,df.columns.str.contains(r'[a-zA-Z]',regex=True)] # removing unnamed cols
+            df = clean_samsung_csv(file_path)
+            # df = df.loc[:,df.columns.str.contains(r'[a-zA-Z]',regex=True)] # removing unnamed cols
             
             # converting date cols
-            # for col in df.columns:
-            #     col_lower = col.lower()
+            for col in df.columns:
+                col_lower = col.lower()
 
-            #     if 'offset' in col_lower:
-            #         df[col] = df[col].astype(str)
+                if 'offset' in col_lower:
+                    df[col] = df[col].astype(str)
 
-            #     elif 'time' in col_lower or 'date' in col_lower:
-            #         def safe_parse(val):
-            #             if isinstance(val, str) and len(val.strip()) < 40:
-            #                 return parse_datetime_custom(val)
-            #             return val
+                elif 'time' in col_lower or 'date' in col_lower:
+                    def safe_parse(val):
+                        try:
+                            if isinstance(val, str) and len(val.strip()) < 40:
+                                return parse_datetime_custom(val)
+                        except Exception as e:
+                            print(f"[DEBUG] Exception during safe parse: {val} -> {e}")
+                        
+                        return val
                     
-            #         df[col] = df[col].apply(safe_parse)
+                    df[col] = df[col].apply(safe_parse)
 
                    
             
@@ -146,8 +174,8 @@ def run_etl(data_folder):
     cursor.close()
     conn.close()
 
-# Optional: Create DB before ETL
-# create_new_db(os.getenv("PGDATABASE"))
+#Optional: Create DB before ETL
+# createNewDB(os.getenv("PGDATABASE"))
 
 # Run the pipeline
 run_etl(path)
