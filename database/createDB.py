@@ -5,6 +5,7 @@ import pandas as pd
 from psycopg2 import sql
 import glob
 import re
+import json
 from datetime import datetime
 load_dotenv()
 path = os.getenv("DATA_PATH")
@@ -130,11 +131,15 @@ def run_etl(data_folder):
     conn = get_connection()
     cursor = conn.cursor()
     csv_files = glob.glob(os.path.join(data_folder,"*.csv"))
+    tableNamesList =[] # for out of script use in future data accessing    
+
+    ######################### CSV to DataFrame ###############################
 
     for file_path in csv_files:
         try:
             table_name = os.path.splitext(os.path.basename(file_path))[0].lower()
             cleaned_tbl_name = clean_tbl_name(table_name)
+            tableNamesList.append(cleaned_tbl_name) # saving final name of the table for future use            
             df = clean_samsung_csv(file_path)
             # df = df.loc[:,df.columns.str.contains(r'[a-zA-Z]',regex=True)] # removing unnamed cols
             
@@ -157,7 +162,7 @@ def run_etl(data_folder):
                     
                     df[col] = df[col].apply(safe_parse)
 
-                   
+            ###### CREATING A TABLE FOR THAT CSV THATS TURNED INTO DF & INSERTING DATA ###########33
             
             create_table(cursor,cleaned_tbl_name,df)
             insert_data(cursor,cleaned_tbl_name,df)
@@ -173,9 +178,6 @@ def run_etl(data_folder):
     conn.commit()
     cursor.close()
     conn.close()
-
-#Optional: Create DB before ETL
-# createNewDB(os.getenv("PGDATABASE"))
-
-# Run the pipeline
-run_etl(path)
+    # saving names of tables in json
+    with open("database/tableNamesList.json","w") as f:
+        json.dump(tableNamesList,f)
