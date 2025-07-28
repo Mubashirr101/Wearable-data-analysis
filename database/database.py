@@ -26,5 +26,5 @@ def getEntryCount(tablename):
 
 with open("database/tableNamesList.json","r") as f:
     tableNamesList = json.load(f)
-for tables in tableNamesList:
+for tables in sorted(tableNamesList):
     getEntryCount(tables)
