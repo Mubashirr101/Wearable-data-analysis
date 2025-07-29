@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Exploring Datasets (CSVs) and Understanding their Features
-dataset_path = os.getenv("DATA_PATH")
+path = os.getenv("DATA_PATH")
 
 # Listing all the Features in the CSVs 
 # First removing timestamps from the filenames of CSV files
@@ -40,16 +40,13 @@ def save_feat(dataset_path):
     summary_data = extract_csv_features(dataset_path)
 
     #saving features dict to json file
-    with open("features.json","w") as f:
+    with open("backend/services/features.json","w") as f:
         json.dump(summary_data,f,indent=4)
 
     print("Saved: features.json")
 
 
 # Converting CSV into df
-# lets take 1 csv to convert
-csv_path = r"D:\Projects\Project_7\FitnessTracker\data\raw\Samsung Health\samsunghealth_shaikhmubashir197_20250723145868\com.samsung.health.caffeine_intake.20250723145868.csv"
-
 def cleanNconvert_CSV(path):
     from io import StringIO
     cleaned_lines = []
@@ -61,6 +58,13 @@ def cleanNconvert_CSV(path):
             cleaned_lines.append(line)
     return pd.read_csv(StringIO('\n'.join(cleaned_lines)))
 
-# df = cleanNconvert_CSV(csv_path)
-# df.head()
 
+######################################################################
+## run script to save feature names
+# save_feat(path)
+
+## run script to convert a csv into df
+# csv_path = os.getenv("CSV_PATH")
+# df = cleanNconvert_CSV(csv_path)
+# print(f"Dataframe of '{csv_path}'")
+# print(df.head())

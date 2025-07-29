@@ -5,3 +5,4 @@ __pycache__
 .vscode/
 data/raw
 .env
+notebooks/test_Scripts/
