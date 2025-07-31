@@ -68,3 +68,12 @@ def cleanNconvert_CSV(path):
 # df = cleanNconvert_CSV(csv_path)
 # print(f"Dataframe of '{csv_path}'")
 # print(df.head())
+
+## find no. of rows in each dataset
+# datapath = os.getenv("DATA_PATH")
+# for csvs in sorted(os.listdir(datapath)):
+#     if csvs.endswith(".csv"):
+#         df = cleanNconvert_CSV(os.path.join(datapath,csvs))
+#         print(f"{csvs} :{len(df)}")
+# print(f"Dataframe of '{csv_path}'")
+# print(df.head())

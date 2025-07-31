@@ -1,6 +1,7 @@
 import psycopg2
 import os
 from dotenv import load_dotenv
+from datetime import datetime
 import pandas as pd
 from psycopg2 import sql
 import json
@@ -15,16 +16,41 @@ def get_connection():
         port = os.getenv("PGPORT")        
     )
 
-
-def getEntryCount(tablename):
+def getEntryCount(tablenames):
     conn = get_connection()
     cursor = conn.cursor()
+    rowcountDict = {}
+    timestamp = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
 
-    cursor.execute(f"SELECT COUNT(*)FROM {tablename};")
-    count = cursor.fetchone()[0]
-    print(f"Table: {tablename} has {count} rows.")
+    for table in sorted(tablenames):
+        try:
+            cursor.execute(sql.SQL("SELECT COUNT(*)FROM {}").format(sql.Identifier(table)))
+            count = cursor.fetchone()[0]
+            # print(f"Table: {table} has {count} rows.")
+            rowcountDict[table] = count
+        except Exception as e:
+            rowcountDict[table] = f"Error: {str(e)}"
+    cursor.close()
+    conn.close()
+
+    # reading any saved json file if available
+    filepath = "database/RowCounts.json"
+    if os.path.exists(filepath):
+        with open(filepath,"r") as f:
+            fulldata = json.load(f)
+    else:
+        fulldata = {}
+
+    # Adding new rowcount entry
+    fulldata[timestamp] = rowcountDict
+    # saving it in json
+    with open("database/RowCounts.json","w") as f:
+        json.dump(fulldata,f,indent=4)
+
+        
+
+        
 
 with open("database/tableNamesList.json","r") as f:
     tableNamesList = json.load(f)
-for tables in sorted(tableNamesList):
-    getEntryCount(tables)
+getEntryCount(tableNamesList)

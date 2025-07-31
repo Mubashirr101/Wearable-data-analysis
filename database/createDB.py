@@ -11,7 +11,7 @@ load_dotenv()
 path = os.getenv("DATA_PATH")
     
 # Creating new database
-def createNewDB(dbname):
+def createNewDB():
     # connecting with the adminDB to create new db since Postgre doesnt allow connecting to non existing DB
     conn = psycopg2.connect(
             dbname=os.getenv("PGADMIN_DB"),
@@ -22,7 +22,7 @@ def createNewDB(dbname):
         )
     conn.autocommit = True
     cursor = conn.cursor()
-    new_db_name = dbname
+    new_db_name = os.getenv("PGDATABASE")
     cursor.execute(f"SELECT 1 FROM pg_database WHERE datname = '{new_db_name}'")
     exists = cursor.fetchone()
 
@@ -68,17 +68,25 @@ def create_table(cursor,table_name,df):
         col_safe = col.strip().lower().replace(" ","_")
         col_safe = re.sub(r'^com\.samsung\.s?health\.','',col_safe).replace(".","_")
         cols.append(f"{col_safe} {sql_type}")
+        if col_safe.endswith("datauuid"):
+            unique_col = col_safe
+
+    if unique_col:
+        print(f"Unique key: {unique_col}")
+        cols.append(f"UNIQUE ({unique_col})")
 
     col_string = ", ".join(cols)
     cursor.execute(sql.SQL(
         f"CREATE TABLE IF NOT EXISTS {table_name} ({col_string});"
     ))
 
-def insert_data(cursor,table_name,df):
+    return unique_col
+
+def insert_data(cursor,table_name,df,uniquekey):
     df.columns = [col.strip().lower().replace(" ","_") for col in df.columns]
     df = df.where(pd.notnull(df),None)
     placeholders = ", ".join(["%s"] * len(df.columns))
-    insert_query = sql.SQL(f"INSERT INTO {table_name} VALUES ({placeholders})")
+    insert_query = sql.SQL(f"INSERT INTO {table_name} VALUES ({placeholders}) ON CONFLICT ({uniquekey}) DO NOTHING;")
     for row in df.itertuples(index = False, name = None):
         cursor.execute(insert_query,row)
 
@@ -127,6 +135,7 @@ def parse_datetime_custom(val):
     return val
 
 
+
 def run_etl(data_folder):
     conn = get_connection()
     cursor = conn.cursor()
@@ -163,9 +172,10 @@ def run_etl(data_folder):
                     df[col] = df[col].apply(safe_parse)
 
             ###### CREATING A TABLE FOR THAT CSV THATS TURNED INTO DF & INSERTING DATA ###########33
-            
-            create_table(cursor,cleaned_tbl_name,df)
-            insert_data(cursor,cleaned_tbl_name,df)
+
+                
+            uniqueKey = create_table(cursor,cleaned_tbl_name,df)
+            insert_data(cursor,cleaned_tbl_name,df,uniqueKey)
 
             print(f"Loaded {file_path} -> {cleaned_tbl_name}")
         except Exception as e:
@@ -181,3 +191,5 @@ def run_etl(data_folder):
     # saving names of tables in json
     with open("database/tableNamesList.json","w") as f:
         json.dump(tableNamesList,f)
+
+run_etl(path)
