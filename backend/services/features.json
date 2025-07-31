@@ -434,6 +434,18 @@
             "com.samsung.health.exercise.datauuid",
             "com.samsung.health.exercise.sweat_loss"
         ],
+        "com.samsung.shealth.exercise.custom_exercise": [
+            "custom_name",
+            "custom_type",
+            "preference",
+            "update_time",
+            "create_time",
+            "deviceuuid",
+            "pkg_name",
+            "custom_id",
+            "datauuid",
+            "visibility"
+        ],
         "com.samsung.shealth.exercise.hr_zone.settings": [
             "create_sh_ver",
             "start_time",
@@ -445,6 +457,18 @@
             "time_offset",
             "deviceuuid",
             "exercise_id",
+            "pkg_name",
+            "datauuid"
+        ],
+        "com.samsung.shealth.exercise.periodization_training_program": [
+            "create_sh_ver",
+            "start_time",
+            "modify_sh_ver",
+            "update_time",
+            "create_time",
+            "program",
+            "time_offset",
+            "deviceuuid",
             "pkg_name",
             "datauuid"
         ],
@@ -666,6 +690,36 @@
             "com.samsung.health.sleep.pkg_name",
             "com.samsung.health.sleep.end_time",
             "com.samsung.health.sleep.datauuid"
+        ],
+        "com.samsung.shealth.social.leaderboard": [
+            "update_time",
+            "create_time",
+            "my_value",
+            "body",
+            "type",
+            "deviceuuid",
+            "pkg_name",
+            "last_sync_time",
+            "datauuid"
+        ],
+        "com.samsung.shealth.social.public_challenge": [
+            "update_time",
+            "create_time",
+            "body",
+            "deviceuuid",
+            "pkg_name",
+            "last_sync_time",
+            "datauuid"
+        ],
+        "com.samsung.shealth.social.public_challenge.history": [
+            "update_time",
+            "create_time",
+            "body",
+            "challenge_time",
+            "deviceuuid",
+            "pkg_name",
+            "last_sync_time",
+            "datauuid"
         ],
         "com.samsung.shealth.social.service_status": [
             "status",

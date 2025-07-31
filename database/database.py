@@ -47,9 +47,7 @@ def getEntryCount(tablenames):
     with open("database/RowCounts.json","w") as f:
         json.dump(fulldata,f,indent=4)
 
-        
-
-        
+           
 
 with open("database/tableNamesList.json","r") as f:
     tableNamesList = json.load(f)

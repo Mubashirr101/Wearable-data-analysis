@@ -73,7 +73,10 @@ def findnewfiles(normalised_files):
             print(f"    {index}: {files}")
         
 
-# run the code for finding new files
-with open("backend/services/filenames.json","r") as f:
-    normed_data = json.load(f)
-    findnewfiles(normed_data)
+## 1 - Save the list of backups
+# savebackups(path)
+
+## 2 - run the code for finding new files
+# with open("backend/services/filenames.json","r") as f:
+#     normed_data = json.load(f)
+#     findnewfiles(normed_data)
