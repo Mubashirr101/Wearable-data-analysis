@@ -340,25 +340,6 @@
             "datauuid",
             "inhale_duration"
         ],
-        "com.samsung.shealth.calories_burned.details": [
-            "active_calories_goal",
-            "version",
-            "extra_data",
-            "exercise_calories",
-            "total_exercise_calories",
-            "com.samsung.shealth.calories_burned.create_sh_ver",
-            "com.samsung.shealth.calories_burned.tef_calorie",
-            "com.samsung.shealth.calories_burned.active_time",
-            "com.samsung.shealth.calories_burned.rest_calorie",
-            "com.samsung.shealth.calories_burned.modify_sh_ver",
-            "com.samsung.shealth.calories_burned.update_time",
-            "com.samsung.shealth.calories_burned.create_time",
-            "com.samsung.shealth.calories_burned.active_calorie",
-            "com.samsung.shealth.calories_burned.deviceuuid",
-            "com.samsung.shealth.calories_burned.pkg_name",
-            "com.samsung.shealth.calories_burned.datauuid",
-            "com.samsung.shealth.calories_burned.day_time"
-        ],
         "com.samsung.shealth.exercise": [
             "live_data_internal",
             "mission_value",
@@ -501,6 +482,29 @@
             "end_time",
             "datauuid",
             "heart_rate"
+        ],
+        "com.samsung.shealth.exercise.routine": [
+            "total_average_hr",
+            "start_time",
+            "total_calorie",
+            "total_distance",
+            "update_time",
+            "create_time",
+            "client_data_id",
+            "client_data_ver",
+            "title",
+            "total_max_hr",
+            "total_min_hr",
+            "time_offset",
+            "deviceuuid",
+            "comment",
+            "pkg_name",
+            "total_duration",
+            "heart_rate_deviceuuid",
+            "custom_id",
+            "end_time",
+            "datauuid",
+            "activities"
         ],
         "com.samsung.shealth.exercise.weather": [
             "uv_index",
@@ -690,6 +694,19 @@
             "com.samsung.health.sleep.pkg_name",
             "com.samsung.health.sleep.end_time",
             "com.samsung.health.sleep.datauuid"
+        ],
+        "com.samsung.shealth.sleep_goal": [
+            "create_sh_ver",
+            "modify_sh_ver",
+            "update_time",
+            "create_time",
+            "sleep_time",
+            "wake_up_time",
+            "deviceuuid",
+            "pkg_name",
+            "bed_time",
+            "set_time",
+            "datauuid"
         ],
         "com.samsung.shealth.social.leaderboard": [
             "update_time",

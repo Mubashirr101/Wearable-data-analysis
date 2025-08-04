@@ -59,24 +59,24 @@ def savebackups(main_folder_path):
 
 
 # Function to find newly added (UNIQUE) files in normalised file list
-def findnewfiles(normalised_files):
+def findnewfiles(filenamesPATH):
+    with open(filenamesPATH,"r") as f:
+        normalised_files = json.load(f)
     seen_files = set()
-    print("Newly Added files:")
+    indexed_files ={}
     for backups in sorted(normalised_files):
-        print(f"\n {backups}:")
         new_files =[]
         for files in sorted(normalised_files[backups]):
             if files not in seen_files:
                 new_files.append(files)
                 seen_files.add(files)        
-        for index,files in enumerate(new_files,start=1):
-            print(f"    {index}: {files}")
-        
-
-## 1 - Save the list of backups
-# savebackups(path)
-
-## 2 - run the code for finding new files
-# with open("backend/services/filenames.json","r") as f:
-#     normed_data = json.load(f)
-#     findnewfiles(normed_data)
+        # per folder index dict
+        file_dict = {}
+        for index,file in enumerate(new_files,start=1):
+            # print(f"    {index}: {file}")
+            file_dict[str(index)] = file
+        if file_dict:
+            indexed_files[backups] = file_dict        
+    with open(r"backend\services\newfiles.json","w") as out:
+        json.dump(indexed_files,out,indent=4)
+    print("[SAVED]: Newly added filenames in json")

@@ -16,13 +16,15 @@ def get_connection():
         port = os.getenv("PGPORT")        
     )
 
-def getEntryCount(tablenames):
+def getEntryCount(tableNamesListPATH): 
+    with open(tableNamesListPATH,"r") as f:
+        tableNamesList = json.load(f)
     conn = get_connection()
     cursor = conn.cursor()
     rowcountDict = {}
     timestamp = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
 
-    for table in sorted(tablenames):
+    for table in sorted(tableNamesList):
         try:
             cursor.execute(sql.SQL("SELECT COUNT(*)FROM {}").format(sql.Identifier(table)))
             count = cursor.fetchone()[0]
@@ -48,7 +50,3 @@ def getEntryCount(tablenames):
         json.dump(fulldata,f,indent=4)
 
            
-
-with open("database/tableNamesList.json","r") as f:
-    tableNamesList = json.load(f)
-getEntryCount(tableNamesList)

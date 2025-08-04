@@ -7,8 +7,8 @@ import glob
 import re
 import json
 from datetime import datetime
-load_dotenv()
-path = os.getenv("DATA_PATH")
+# load_dotenv()
+# path = os.getenv("DATA_PATH")
     
 # Creating new database
 def createNewDB():
@@ -191,5 +191,3 @@ def run_etl(data_folder):
     # saving names of tables in json
     with open("database/tableNamesList.json","w") as f:
         json.dump(tableNamesList,f)
-
-run_etl(path)

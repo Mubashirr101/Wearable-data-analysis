@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Exploring Datasets (CSVs) and Understanding their Features
-path = os.getenv("DATA_PATH")
+# path = os.getenv("DATA_PATH")
 
 # Listing all the Features in the CSVs 
 # First removing timestamps from the filenames of CSV files
