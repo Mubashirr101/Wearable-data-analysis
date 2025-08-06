@@ -1,9 +1,11 @@
 venv/
 __pycache__
 *.pyc
-*.log/
+*.log
 .vscode/
-data/raw
+data/raw/
 .env
 notebooks/test_Scripts/
 *.bat
+logs/
+logs.txt
