@@ -175,15 +175,29 @@ def run_etl(data_folder):
 
                 
             uniqueKey = create_table(cursor,cleaned_tbl_name,df)
-            insert_data(cursor,cleaned_tbl_name,df,uniqueKey)
+            try:
+                insert_data(cursor, cleaned_tbl_name, df, uniqueKey)
+            except Exception as insert_err:
+                print(f"[ERROR] Bulk insert failed: {insert_err}")
+                print("[INFO] Attempting row-by-row insert to find problem row...")  # 🔥
+
+                # 🔥 Insert row-by-row to identify the problem row
+                for i, row in df.iterrows():
+                    try:
+                        insert_data(cursor, cleaned_tbl_name, row.to_frame().T, uniqueKey)
+                    except Exception as row_err:
+                        print(f"[🔥 ERROR] Failed at row {i+1}: {row_err}")
+                        print(f"[ROW DATA]:\n{row}")
+                        conn.rollback()  # 🔥 Reset the broken transaction
+                        raise row_err  # Optional: stop here, or continue with next row/file
 
             print(f"Loaded {file_path} -> {cleaned_tbl_name}")
         except Exception as e:
             print(f"Error processing {file_path}: {e}")
-            print(f"[DEBUG] Columns: {df.columns.tolist()}")
-            print(f"[DEBUG] Dtypes:\n{df.dtypes}")
+            # print(f"[DEBUG] Columns: {df.columns.tolist()}")
+            # print(f"[DEBUG] Dtypes:\n{df.dtypes}")
+            conn.rollback()                    
             
-            conn.rollback()
         
     conn.commit()
     cursor.close()

@@ -35,6 +35,21 @@
             "fixed_name",
             "datauuid"
         ],
+        "com.samsung.health.floors_climbed": [
+            "start_time",
+            "custom",
+            "update_time",
+            "create_time",
+            "client_data_id",
+            "client_data_ver",
+            "floor",
+            "raw_data",
+            "time_offset",
+            "deviceuuid",
+            "pkg_name",
+            "end_time",
+            "datauuid"
+        ],
         "com.samsung.health.food_info": [
             "potassium",
             "vitamin_a",
@@ -271,16 +286,6 @@
             "datauuid",
             "day_time"
         ],
-        "com.samsung.shealth.activity_level": [
-            "activity_level",
-            "start_time",
-            "update_time",
-            "create_time",
-            "time_offset",
-            "deviceuuid",
-            "pkg_name",
-            "datauuid"
-        ],
         "com.samsung.shealth.badge": [
             "number_of_streak",
             "start_time",
@@ -339,6 +344,25 @@
             "end_time",
             "datauuid",
             "inhale_duration"
+        ],
+        "com.samsung.shealth.calories_burned.details": [
+            "active_calories_goal",
+            "version",
+            "extra_data",
+            "exercise_calories",
+            "total_exercise_calories",
+            "com.samsung.shealth.calories_burned.create_sh_ver",
+            "com.samsung.shealth.calories_burned.tef_calorie",
+            "com.samsung.shealth.calories_burned.active_time",
+            "com.samsung.shealth.calories_burned.rest_calorie",
+            "com.samsung.shealth.calories_burned.modify_sh_ver",
+            "com.samsung.shealth.calories_burned.update_time",
+            "com.samsung.shealth.calories_burned.create_time",
+            "com.samsung.shealth.calories_burned.active_calorie",
+            "com.samsung.shealth.calories_burned.deviceuuid",
+            "com.samsung.shealth.calories_burned.pkg_name",
+            "com.samsung.shealth.calories_burned.datauuid",
+            "com.samsung.shealth.calories_burned.day_time"
         ],
         "com.samsung.shealth.exercise": [
             "live_data_internal",
