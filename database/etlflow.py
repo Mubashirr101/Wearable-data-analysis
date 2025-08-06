@@ -1,77 +1,87 @@
-import sys, os
-current_dir = os.path.dirname(os.path.abspath(__file__))
-parent_dir = os.path.dirname(current_dir)
-## add parent dir to sys.path
-sys.path.append(parent_dir)
+import os
+import sys
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+# ---------------------- PATH SETUP ---------------------- #
+# Add parent directory to sys.path
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+PARENT_DIR = os.path.dirname(CURRENT_DIR)
+sys.path.append(PARENT_DIR)
+
+# ---------------------- IMPORTS ------------------------- #
 from backend.services.datasetFiltering import savebackups, findnewfiles
 from backend.services.datasetExploration import save_feat
 from createDB import run_etl
 from database import getEntryCount
-from dotenv import load_dotenv
-load_dotenv()
 
-def updateDataPath(env_path,env_variable,target_folder):
-     """
-      Finds the newest file in the target folder and updates the .env file with its path.
+# ---------------------- CONFIG -------------------------- #
+ENV_PATH = ".env"
+ENV_VARIABLE = "DATA_PATH"
+DATA_ROOT_FOLDER = r"data\raw\Samsung Health"
+FILENAMES_JSON = r"backend\services\filenames.json"
+TABLE_NAMES_JSON = r"database\tableNamesList.json"
+BACKUP_PATH = os.getenv("BACKUP_PATH")
 
-      Parameters:
-        env_path (str): Path to the .env file.
-        env_variable (str): Name of the environment variable to update.
-        target_folder (str): Directory to search for the latest file.
-     """
-     ## 1 -  Getting all the subfodlers in the target folder     
-     all_folders = []
-     for item in os.listdir(target_folder):
-          item_path = os.path.join(target_folder,item)
-          if os.path.isdir(item_path):
-               all_folders.append(item_path)
-     
-     ## 2 - finding the latest folder
-     if len(all_folders) == 0:
-          print("[ERROR][updatingENV]: No folders found the target dir")
-          return
-     latest_folder = all_folders[0]
-     for folder_path in all_folders:
-          if os.path.getctime(folder_path) > os.path.getctime(latest_folder):
-               latest_folder = folder_path
-     
-     ## 3 - reading the existing env file
-     updated_lines = []
-     variable_found = False
+# ---------------------- FUNCTIONS ----------------------- #
+def update_env_with_latest_folder(env_path: str, variable: str, target_folder: str):
+    """
+    Update .env file with the path of the latest folder in the target directory.
+    """
+    all_folders = [
+        os.path.join(target_folder, item)
+        for item in os.listdir(target_folder)
+        if os.path.isdir(os.path.join(target_folder, item))
+    ]
 
-     if os.path.exists(env_path):
-          with open(env_path,'r') as file:
-               for line in file:
-                    if line.startswith(env_variable + " = "):
-                         escaped_path = str(latest_folder).replace("\\", "\\\\")                                                 
-                         updated_lines.append(env_variable + ' = "' + escaped_path + '"\n')
-                         variable_found = True
-                    else:
-                         updated_lines.append(line)
+    if not all_folders:
+        print("[ERROR][update_env_with_latest_folder]: No folders found in the target directory.")
+        return
 
-     ## if var not found, make it 
-     if not variable_found:
-        escaped_path = str(latest_folder).replace("\\", "\\\\")                                                 
-        updated_lines.append(env_variable + ' = "' + escaped_path + '"\n')
+    latest_folder = max(all_folders, key=os.path.getctime)
+    escaped_path = latest_folder.replace("\\", "\\\\")
 
-     ## write the updated line back to the env file
-     with open(env_path, "w") as file:
-        for line in updated_lines:
-             file.write(line)
+    updated_lines = []
+    variable_found = False
 
-     print(f"[ENV UPDATED] Latest folder path : {latest_folder}")
-          
+    if os.path.exists(env_path):
+        with open(env_path, 'r') as file:
+            for line in file:
+                if line.strip().startswith(variable + " ="):
+                    updated_lines.append(f'{variable} = "{escaped_path}"\n')
+                    variable_found = True
+                else:
+                    updated_lines.append(line)
 
-def runFlow():
-    main_folder_path = os.getenv("BACKUP_PATH")
-    filenamesJSON = r"backend\services\filenames.json"
-    tableNamesListJSON = r"database\tableNamesList.json"
-    updateDataPath(env_path=r".env",env_variable="DATA_PATH",target_folder=r"data\raw\Samsung Health")
-    dataPath = os.getenv("DATA_PATH")
-    savebackups(main_folder_path)
-    findnewfiles(filenamesJSON)
-    save_feat(dataPath)
-    run_etl(dataPath)
-    getEntryCount(tableNamesListJSON)
+    if not variable_found:
+        updated_lines.append(f'{variable} = "{escaped_path}"\n')
 
-runFlow()
+    with open(env_path, "w") as file:
+        file.writelines(updated_lines)
+
+    print(f"[ENV UPDATED] → {variable} = {latest_folder}")
+
+def run_flow():
+    """
+    Orchestrates the entire ETL and processing flow.
+    """
+    update_env_with_latest_folder(ENV_PATH, ENV_VARIABLE, DATA_ROOT_FOLDER)
+
+    data_path = os.getenv("DATA_PATH")
+    if not data_path:
+        print("[ERROR][run_flow]: DATA_PATH not set in .env")
+        return
+
+    print("[INFO] Starting data processing pipeline...")
+    savebackups(BACKUP_PATH)
+    findnewfiles(FILENAMES_JSON)
+    save_feat(data_path)
+    run_etl(data_path)
+    getEntryCount(TABLE_NAMES_JSON)
+    print("[INFO] Data pipeline completed successfully.")
+
+# ---------------------- MAIN ---------------------------- #
+if __name__ == "__main__":
+    run_flow()

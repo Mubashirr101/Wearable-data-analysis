@@ -6,3 +6,4 @@ __pycache__
 data/raw
 .env
 notebooks/test_Scripts/
+runflow.bat
