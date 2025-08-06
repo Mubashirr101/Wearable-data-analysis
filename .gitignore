@@ -6,4 +6,4 @@ __pycache__
 data/raw
 .env
 notebooks/test_Scripts/
-run_flow.bat
+*.bat
