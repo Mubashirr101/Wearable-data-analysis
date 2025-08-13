@@ -203,3 +203,4 @@ def run_etl(data_folder):
     # saving names of tables in json
     with open("database/tableNamesList.json","w") as f:
         json.dump(tableNamesList,f)
+    print("[SAVED]: Names of tables uploaded/updated in this session saved in tableNamesList.json")
