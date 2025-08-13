@@ -14,7 +14,6 @@ load_dotenv()
 # backup folders path
 path = os.getenv("BACKUP_PATH")
 
-
 # Cleaning: Removing dates/timestamp from filenames for normalization and ease of comparing
 def remove_timestamp(filename):
     # This regex matches a dot, 14 digits, then .csv at the end
@@ -28,11 +27,11 @@ def normalise_filenames(non_normalised_files):
         for csv in non_normalised_files[backups]:
             filelist.append(remove_timestamp(csv))        
         norm_backup_csv[backups] = filelist
-    # # Listing total files in norm_backup_csv (norm), it matches the no. of files in backup_files (non norm)
+    # Listing total files in norm_backup_csv (norm), it matches the no. of files in backup_files (non norm)
     # print("\n============= NORMALISED: No. of CSV files in each Backup: =============\n")
     # for i in norm_backup_csv:
     #     print(f"\t{i}:{len(norm_backup_csv[i])}")
-    # return norm_backup_csv
+    return norm_backup_csv
 
 # saving names of all the backups and the respective csv files in them in a json file
 def savebackups(main_folder_path):
@@ -45,7 +44,7 @@ def savebackups(main_folder_path):
                 if file.lower().endswith('.csv'):
                     filelist.append(file)
             backup_files[backups] = filelist
-    ## Checking number of files in each backup
+    # Checking number of files in each backup
     # print("\n============= RAW: Number of CSV files in each Backup: =============\n")
     # for i in backup_files:
     #     print(f"\t{i} : {len(backup_files[i])}")
