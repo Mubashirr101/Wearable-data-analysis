@@ -191,7 +191,7 @@ def run_etl(data_folder):
                         conn.rollback()  # 🔥 Reset the broken transaction
                         raise row_err  # Optional: stop here, or continue with next row/file
 
-            print(f"Loaded : {cleaned_tbl_name}")
+            # print(f"Loaded : {cleaned_tbl_name}")
         except Exception as e:
             print(f"Error processing {file_path}: {e}")
             # print(f"[DEBUG] Columns: {df.columns.tolist()}")
