@@ -48,5 +48,6 @@ def getEntryCount(tableNamesListPATH):
     # saving it in json
     with open("database/RowCounts.json","w") as f:
         json.dump(fulldata,f,indent=4)
+    print("[SAVED]: No. of rows in this ETL session in RowCounts.json ")
 
            

@@ -43,7 +43,7 @@ def save_feat(dataset_path):
     with open("backend/services/features.json","w") as f:
         json.dump(summary_data,f,indent=4)
 
-    print("Saved: features.json")
+    print("[Saved]: Feature names in features.json")
 
 
 # Converting CSV into df

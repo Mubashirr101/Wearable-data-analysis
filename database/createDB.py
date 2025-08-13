@@ -72,7 +72,7 @@ def create_table(cursor,table_name,df):
             unique_col = col_safe
 
     if unique_col:
-        print(f"Unique key: {unique_col}")
+        # print(f"Unique key: {unique_col}")
         cols.append(f"UNIQUE ({unique_col})")
 
     col_string = ", ".join(cols)
