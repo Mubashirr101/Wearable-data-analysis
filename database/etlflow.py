@@ -60,9 +60,9 @@ def update_env_with_latest_folder(env_path: str, variable: str, target_folder: s
             logging.error("No folders found in the target directory: %s", target_folder)
             return
 
-        # latest_folder = max(all_folders, key=os.path.getctime)
+        latest_folder = max(all_folders, key=os.path.getctime)
         ## hardcoding a latest file incase a file's eltl flow was skipped
-        latest_folder = r"data\raw\Samsung Health\samsunghealth_shaikhmubashir197_20250812193342"
+        # latest_folder = r""
         escaped_path = latest_folder.replace("\\", "\\\\")
 
         updated_lines = []
