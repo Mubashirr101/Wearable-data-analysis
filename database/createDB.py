@@ -82,16 +82,13 @@ def create_table(cursor,table_name,df):
 
     return unique_col
 
-def insert_data(cursor, table_name, df, uniquekey):
+def insert_data(cursor,table_name,df,uniquekey):
     df.columns = [col.strip().lower().replace(" ","_") for col in df.columns]
-    df = df.where(pd.notnull(df), None)
-    col_names = ", ".join(df.columns)
+    df = df.where(pd.notnull(df),None)
     placeholders = ", ".join(["%s"] * len(df.columns))
-    insert_query = sql.SQL(
-        f"INSERT INTO {table_name} ({col_names}) VALUES ({placeholders}) ON CONFLICT ({uniquekey}) DO NOTHING;"
-    )
-    for row in df.itertuples(index=False, name=None):
-        cursor.execute(insert_query, row)
+    insert_query = sql.SQL(f"INSERT INTO {table_name} VALUES ({placeholders}) ON CONFLICT ({uniquekey}) DO NOTHING;")
+    for row in df.itertuples(index = False, name = None):
+        cursor.execute(insert_query,row)
 
 # clean csv by removing railing commas and metadata
 def clean_samsung_csv(path):
