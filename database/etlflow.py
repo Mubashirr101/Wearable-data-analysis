@@ -95,7 +95,7 @@ def run_flow():
         logging.info("Starting ETL flow...")
 
         update_env_with_latest_folder(ENV_PATH, ENV_VARIABLE, DATA_ROOT_FOLDER)
-
+        load_dotenv(override=True)
         data_path = os.getenv("DATA_PATH")
         if not data_path:
             logging.error("DATA_PATH not set in .env")

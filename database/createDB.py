@@ -82,13 +82,16 @@ def create_table(cursor,table_name,df):
 
     return unique_col
 
-def insert_data(cursor,table_name,df,uniquekey):
+def insert_data(cursor, table_name, df, uniquekey):
     df.columns = [col.strip().lower().replace(" ","_") for col in df.columns]
-    df = df.where(pd.notnull(df),None)
+    df = df.where(pd.notnull(df), None)
+    col_names = ", ".join(df.columns)
     placeholders = ", ".join(["%s"] * len(df.columns))
-    insert_query = sql.SQL(f"INSERT INTO {table_name} VALUES ({placeholders}) ON CONFLICT ({uniquekey}) DO NOTHING;")
-    for row in df.itertuples(index = False, name = None):
-        cursor.execute(insert_query,row)
+    insert_query = sql.SQL(
+        f"INSERT INTO {table_name} ({col_names}) VALUES ({placeholders}) ON CONFLICT ({uniquekey}) DO NOTHING;"
+    )
+    for row in df.itertuples(index=False, name=None):
+        cursor.execute(insert_query, row)
 
 # clean csv by removing railing commas and metadata
 def clean_samsung_csv(path):
@@ -179,16 +182,16 @@ def run_etl(data_folder):
                 insert_data(cursor, cleaned_tbl_name, df, uniqueKey)
             except Exception as insert_err:
                 print(f"[ERROR] Bulk insert failed: {insert_err}")
-                print("[INFO] Attempting row-by-row insert to find problem row...")  # 🔥
+                print("[INFO] Attempting row-by-row insert to find problem row...")  # 
 
-                # 🔥 Insert row-by-row to identify the problem row
+                # Insert row-by-row to identify the problem row
                 for i, row in df.iterrows():
                     try:
                         insert_data(cursor, cleaned_tbl_name, row.to_frame().T, uniqueKey)
                     except Exception as row_err:
-                        print(f"[🔥 ERROR] Failed at row {i+1}: {row_err}")
+                        print(f"[ ERROR] Failed at row {i+1}: {row_err}")
                         print(f"[ROW DATA]:\n{row}")
-                        conn.rollback()  # 🔥 Reset the broken transaction
+                        conn.rollback()  #  Reset the broken transaction
                         raise row_err  # Optional: stop here, or continue with next row/file
 
             # print(f"Loaded : {cleaned_tbl_name}")
