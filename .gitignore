@@ -5,7 +5,7 @@ __pycache__
 .vscode/
 data/raw/
 .env
-notebooks/test_Scripts/
+# notebooks/test_Scripts/
 *.bat
 logs/
 logs.txt
