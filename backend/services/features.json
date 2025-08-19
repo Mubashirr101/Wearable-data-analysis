@@ -120,6 +120,21 @@
             "pkg_name",
             "datauuid"
         ],
+        "com.samsung.health.hrv": [
+            "create_sh_ver",
+            "start_time",
+            "custom",
+            "binning_data",
+            "modify_sh_ver",
+            "update_time",
+            "create_time",
+            "time_offset",
+            "deviceuuid",
+            "comment",
+            "pkg_name",
+            "end_time",
+            "datauuid"
+        ],
         "com.samsung.health.movement": [
             "create_sh_ver",
             "start_time",
@@ -815,6 +830,26 @@
             "pkg_name",
             "datauuid",
             "day_time"
+        ],
+        "com.samsung.shealth.stress": [
+            "create_sh_ver",
+            "start_time",
+            "custom",
+            "binning_data",
+            "tag_id",
+            "modify_sh_ver",
+            "update_time",
+            "create_time",
+            "max",
+            "min",
+            "score",
+            "algorithm",
+            "time_offset",
+            "deviceuuid",
+            "comment",
+            "pkg_name",
+            "end_time",
+            "datauuid"
         ],
         "com.samsung.shealth.stress.histogram": [
             "update_time",
