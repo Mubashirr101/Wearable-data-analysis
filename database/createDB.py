@@ -7,7 +7,8 @@ import glob
 import re
 import json
 from datetime import datetime
-# load_dotenv()
+from dotenv import load_dotenv
+load_dotenv()
 # path = os.getenv("DATA_PATH")
     
 # Creating new database
@@ -36,12 +37,22 @@ def createNewDB():
     conn.close()
     
 def get_connection():
+    # USER = os.getenv("user")
+    # PASSWORD = os.getenv("password")
+    # HOST = os.getenv("host")
+    # PORT = os.getenv("port")
+    # DBNAME = os.getenv("dbname")
     return psycopg2.connect(
+        # database= DBNAME,
+        # user = USER,
+        # password = PASSWORD,
+        # host = HOST,
+        # port = PORT      
         database=os.getenv("PGDATABASE"),
         user = os.getenv("PGUSER"),
         password = os.getenv("PGPASSWORD"),
         host = os.getenv("PGHOST"),
-        port = os.getenv("PGPORT")        
+        port = os.getenv("PGPORT")   
     )
 
 def infer_sql_type(dtype,series=None):
@@ -146,6 +157,7 @@ def run_etl(data_folder):
 
     for file_path in csv_files:
         try:
+            print("file opened")
             table_name = os.path.splitext(os.path.basename(file_path))[0].lower()
             cleaned_tbl_name = clean_tbl_name(table_name)
             tableNamesList.append(cleaned_tbl_name) # saving final name of the table for future use            
