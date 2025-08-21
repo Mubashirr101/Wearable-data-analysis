@@ -157,7 +157,6 @@ def run_etl(data_folder):
 
     for file_path in csv_files:
         try:
-            print("file opened")
             table_name = os.path.splitext(os.path.basename(file_path))[0].lower()
             cleaned_tbl_name = clean_tbl_name(table_name)
             tableNamesList.append(cleaned_tbl_name) # saving final name of the table for future use            
