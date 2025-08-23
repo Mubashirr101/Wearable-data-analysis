@@ -26,10 +26,10 @@ class app:
                 break
         strs_df["start_time_local"] = strs_df.apply(lambda row:self.apply_offset(row,offset_col,"start_time"),axis=1)
         chart = alt.Chart(strs_df).mark_bar().encode(
-            x="start_time_local:T",
-            y="score:Q"
+            alt.X("start_time_local").title("Date/Time"),
+            alt.Y("score").title("Stress Level")
         ).properties(
-            title = "stress level over time"
+            title = "Stress level over Time"
         )
         
         query2 = text("SELECT heart_rate_end_time,heart_rate_heart_rate,heart_rate_time_offset FROM tracker_heart_rate WHERE heart_rate_end_time:: text LIKE :date_pattern")
@@ -44,10 +44,10 @@ class app:
         hr_df["heart_rate_end_time_local"] = hr_df.apply(lambda row: self.apply_offset(row,offset_col2,"heart_rate_end_time"),axis=1)
 
         chart2 = alt.Chart(hr_df).mark_bar().encode(
-                    x="heart_rate_end_time_local:T",
-                    y="heart_rate_heart_rate:Q"
+                    alt.X("heart_rate_end_time_local").title("Date/Time"),
+                    alt.Y("heart_rate_heart_rate").title("Heart Rate")
                 ).properties(
-                    title = "hr level over time"
+                    title = "Heart-Rate over Time"
                 )
         with st.expander("Stress Level"):
             st.altair_chart(chart,use_container_width=True)
