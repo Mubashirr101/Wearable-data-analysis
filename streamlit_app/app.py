@@ -12,48 +12,41 @@ import altair as alt
 class app:
     def __init__(self):
         load_dotenv()
-        st.title("Athlete Fitness Tracker")
-        #sqlalchemy engine syntax --> "postgresql+psycopg2://user:pass@host:port/dbname"
-        engine = create_engine(f"postgresql+psycopg2://{os.getenv("user")}:{urllib.parse.quote_plus(os.getenv("password"))}@{os.getenv("host")}:{os.getenv("port")}/{os.getenv("dbname")}")
-        query = text("SELECT start_time,score,time_offset FROM stress WHERE start_time:: text LIKE :date_pattern")
+        engine = create_engine(f"postgresql+psycopg2://{os.getenv("user")}:{urllib.parse.quote_plus(os.getenv("password"))}@{os.getenv("host")}:{os.getenv("port")}/{os.getenv("dbname")}")        
+        # make tabs
+        tab1,tab2 = st.tabs(['Stress Graph','Heart-Rate Graph'])        
+        with tab1:
+            df_stress = self.querySupabase(engine,"start_time","score","time_offset","stress","2025-08-17") 
+            stresschart = self.chartTimeData(df_stress,"start_time","score","Time/Date","Stress Level","Stress Level over Time") 
+            st.altair_chart(stresschart,use_container_width=True)
+        with tab2:
+            df_hr = self.querySupabase(engine,"heart_rate_end_time","heart_rate_heart_rate","heart_rate_time_offset","tracker_heart_rate","2025-08-17") 
+            hrchart = self.chartTimeData(df_hr,"heart_rate_end_time","heart_rate_heart_rate","Time/Date","Heart-Rate","Heart-Rate over Time") 
+            st.altair_chart(hrchart,use_container_width=True)
+                
+    def querySupabase(self,engine,xvar,yvar,offset,table,datepattern):
+        query = text(f"SELECT {xvar},{yvar},{offset} FROM {table} WHERE {xvar}:: text LIKE :date_pattern")
         with engine.connect() as conn:
-            strs_df = pd.read_sql(query,conn,params={"date_pattern":"2025-08-17%"}) 
-        strs_df["start_time"] = pd.to_datetime(strs_df["start_time"])
+            df = pd.read_sql(query,conn,params={"date_pattern":f"{datepattern}%"})
+        return df
+    def chartTimeData(self,df,xval,yval,xtitle,ytitle,chart_title):
+        df[xval] = pd.to_datetime(df[xval])
         offset_col = None
-        for col in strs_df.columns:
+        for col in df.columns:
             if "time_offset" in col:
                 offset_col = col
                 break
-        strs_df["start_time_local"] = strs_df.apply(lambda row:self.apply_offset(row,offset_col,"start_time"),axis=1)
-        chart = alt.Chart(strs_df).mark_bar().encode(
-            alt.X("start_time_local").title("Date/Time"),
-            alt.Y("score").title("Stress Level")
+        df["localized_time"] = df.apply(lambda row: self.apply_offset(row,offset_col,xval),axis=1)
+        chart = alt.Chart(df).mark_bar().encode(
+            alt.X("localized_time").title(xtitle),
+            alt.Y(yval).title(ytitle)
         ).properties(
-            title = "Stress level over Time"
+            title = chart_title
         )
-        
-        query2 = text("SELECT heart_rate_end_time,heart_rate_heart_rate,heart_rate_time_offset FROM tracker_heart_rate WHERE heart_rate_end_time:: text LIKE :date_pattern")
-        with engine.connect() as conn:
-            hr_df = pd.read_sql(query2,conn,params={"date_pattern":"2025-08-17%"}) 
-        hr_df["heart_rate_end_time"] = pd.to_datetime(hr_df["heart_rate_end_time"])
-        offset_col2 = None
-        for col in hr_df.columns:
-            if "time_offset" in col:
-                offset_col2 = col
-                break
-        hr_df["heart_rate_end_time_local"] = hr_df.apply(lambda row: self.apply_offset(row,offset_col2,"heart_rate_end_time"),axis=1)
+        return chart
 
-        chart2 = alt.Chart(hr_df).mark_bar().encode(
-                    alt.X("heart_rate_end_time_local").title("Date/Time"),
-                    alt.Y("heart_rate_heart_rate").title("Heart Rate")
-                ).properties(
-                    title = "Heart-Rate over Time"
-                )
-        with st.expander("Stress Level"):
-            st.altair_chart(chart,use_container_width=True)
-        with st.expander("HeartRate"):
-            st.altair_chart(chart2,use_container_width=True)
-            
+
+
 
 
 
