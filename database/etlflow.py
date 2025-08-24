@@ -148,7 +148,7 @@ def run_flow():
         findnewfiles(FILENAMES_JSON)
         save_feat(data_path)
         run_etl(data_path,conn)
-        # run_json_upload(json_path)
+        run_json_sync(json_path)
         getEntryCount(TABLE_NAMES_JSON,conn)
 
         # closing the connection of DB
