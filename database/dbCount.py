@@ -16,10 +16,9 @@ def get_connection():
         port = os.getenv("PGPORT")        
     )
 
-def getEntryCount(tableNamesListPATH): 
+def getEntryCount(tableNamesListPATH,conn): 
     with open(tableNamesListPATH,"r") as f:
         tableNamesList = json.load(f)
-    conn = get_connection()
     cursor = conn.cursor()
     rowcountDict = {}
     timestamp = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
@@ -33,7 +32,7 @@ def getEntryCount(tableNamesListPATH):
         except Exception as e:
             rowcountDict[table] = f"Error: {str(e)}"
     cursor.close()
-    conn.close()
+    # conn.close()
 
     # reading any saved json file if available
     filepath = "database/RowCounts.json"

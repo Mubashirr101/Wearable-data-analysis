@@ -1,8 +1,20 @@
+# ---------------------- IMPORTING LIBS ---------------------#
 import os
 import sys
 import logging
 from dotenv import load_dotenv
+import psycopg2
+# ---------------------- PATH SETUP -------------------------- #
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+PARENT_DIR = os.path.dirname(CURRENT_DIR)
+sys.path.append(PARENT_DIR)
 
+# ---------------------- IMPORTING MODULES ----------------------------- #
+from backend.services.datasetFiltering import savebackups, findnewfiles
+from backend.services.datasetExploration import save_feat
+from connectNsyncDB import run_etl
+from dbCount import getEntryCount
+from jsonUploads import run_json_sync
 # ---------------------- LOGGING SETUP ----------------------- #
 LOG_DIR = "logs"
 LOG_FILE = os.path.join(LOG_DIR, "etl.log")
@@ -25,17 +37,7 @@ logging.getLogger().addHandler(console_handler)
 # ---------------------- LOAD ENV ---------------------------- #
 load_dotenv()
 
-# ---------------------- PATH SETUP -------------------------- #
-CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-PARENT_DIR = os.path.dirname(CURRENT_DIR)
-sys.path.append(PARENT_DIR)
 
-# ---------------------- IMPORTS ----------------------------- #
-from backend.services.datasetFiltering import savebackups, findnewfiles
-from backend.services.datasetExploration import save_feat
-from createDB import run_etl
-from database import getEntryCount
-from jsonUploads import run_json_upload
 
 # ---------------------- CONFIG ------------------------------ #
 ENV_PATH = ".env"
@@ -47,6 +49,32 @@ TABLE_NAMES_JSON = r"database\tableNamesList.json"
 BACKUP_PATH = os.getenv("BACKUP_PATH")
 
 # ---------------------- FUNCTIONS --------------------------- #
+
+def get_connection(type):
+    try:
+        if type == 'local':
+            print(type)
+            return psycopg2.connect(
+                database=os.getenv("PGDATABASE"),
+                user = os.getenv("PGUSER"),
+                password = os.getenv("PGPASSWORD"),
+                host = os.getenv("PGHOST"),
+                port = os.getenv("PGPORT")   
+            )
+        elif type == 'supabase':
+            print(type)
+            return psycopg2.connect(
+                database=os.getenv("dbname"),
+                user = os.getenv("user"),
+                password = os.getenv("password"),
+                host = os.getenv("host"),
+                port = os.getenv("post")  
+
+            )
+    except Exception as e:
+        logging.exception("Could not make DB connection",e)
+
+
 def update_env_with_latest_folder(env_path: str, variable1: str,variable2: str, target_folder: str):
     """
     Update .env file with the path of the latest folder of csv and json in the target directory.
@@ -113,21 +141,23 @@ def run_flow():
         if not json_path:
             logging.error("JSON_PATH not set in .env")
             return
-
+        ## connect the DB, 2 options -> local OR supabase
+        conn = get_connection("local")        
+        ## run scripts
         savebackups(BACKUP_PATH)
         findnewfiles(FILENAMES_JSON)
         save_feat(data_path)
-        run_etl(data_path)
+        run_etl(data_path,conn)
         # run_json_upload(json_path)
-        getEntryCount(TABLE_NAMES_JSON)
+        getEntryCount(TABLE_NAMES_JSON,conn)
 
+        # closing the connection of DB
+        conn.close()
         logging.info("Data pipeline completed successfully.")
 
     except Exception as e:
         logging.exception("ETL flow failed with an exception.")
 
 # ---------------------- MAIN ------------------------------- #
-# if __name__ == "__main__":
-#     run_flow()
-
-update_env_with_latest_folder(ENV_PATH,ENV_VARIABLE_DATA,ENV_VARIABLE_JSON, DATA_ROOT_FOLDER)
+if __name__ == "__main__":
+    run_flow()

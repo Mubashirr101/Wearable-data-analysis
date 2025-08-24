@@ -66,8 +66,7 @@ def infer_sql_type(dtype,series=None):
         return "TIMESTAMP"
     else:
         return "TEXT"
-    
-   
+     
 def create_table(cursor,table_name,df):
     cols =[]
     df = df.where(pd.notnull(df), None)  # ensure NaT/NaN won't break SQL inserts    
@@ -145,10 +144,7 @@ def parse_datetime_custom(val):
     # returning val as string as fallback
     return val
 
-
-
-def run_etl(data_folder):
-    conn = get_connection()
+def run_etl(data_folder,conn):
     cursor = conn.cursor()
     csv_files = glob.glob(os.path.join(data_folder,"*.csv"))
     tableNamesList =[] # for out of script use in future data accessing    
@@ -210,7 +206,7 @@ def run_etl(data_folder):
             conn.rollback()                                    
     conn.commit()
     cursor.close()
-    conn.close()
+    # conn.close()
     # saving names of tables in json
     with open("database/tableNamesList.json","w") as f:
         json.dump(tableNamesList,f)
