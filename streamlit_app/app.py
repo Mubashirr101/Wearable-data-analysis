@@ -17,11 +17,11 @@ class app:
         tab1,tab2 = st.tabs(['Stress Graph','Heart-Rate Graph'])        
         with tab1:
             df_stress = self.querySupabase(engine,"start_time","score","time_offset","stress","2025-08-17") 
-            stresschart = self.chartTimeData(df_stress,"start_time","score","Time/Date","Stress Level","Stress Level over Time") 
+            stresschart = self.chartTimeData(df_stress,"start_time","score","Time/Date","Stress Level","⚡ Stress Level over Time") 
             st.altair_chart(stresschart,use_container_width=True)
         with tab2:
             df_hr = self.querySupabase(engine,"heart_rate_end_time","heart_rate_heart_rate","heart_rate_time_offset","tracker_heart_rate","2025-08-17") 
-            hrchart = self.chartTimeData(df_hr,"heart_rate_end_time","heart_rate_heart_rate","Time/Date","Heart-Rate","Heart-Rate over Time") 
+            hrchart = self.chartTimeData(df_hr,"heart_rate_end_time","heart_rate_heart_rate","Time/Date","Heart-Rate","🫀 Heart-Rate over Time") 
             st.altair_chart(hrchart,use_container_width=True)
                 
     def querySupabase(self,engine,xvar,yvar,offset,table,datepattern):

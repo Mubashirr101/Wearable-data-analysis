@@ -35,19 +35,21 @@ from backend.services.datasetFiltering import savebackups, findnewfiles
 from backend.services.datasetExploration import save_feat
 from createDB import run_etl
 from database import getEntryCount
+from jsonUploads import run_json_upload
 
 # ---------------------- CONFIG ------------------------------ #
 ENV_PATH = ".env"
-ENV_VARIABLE = "DATA_PATH"
+ENV_VARIABLE_DATA = "DATA_PATH"
+ENV_VARIABLE_JSON = "JSON_PATH"
 DATA_ROOT_FOLDER = r"data\raw\Samsung Health"
 FILENAMES_JSON = r"backend\services\filenames.json"
 TABLE_NAMES_JSON = r"database\tableNamesList.json"
 BACKUP_PATH = os.getenv("BACKUP_PATH")
 
 # ---------------------- FUNCTIONS --------------------------- #
-def update_env_with_latest_folder(env_path: str, variable: str, target_folder: str):
+def update_env_with_latest_folder(env_path: str, variable1: str,variable2: str, target_folder: str):
     """
-    Update .env file with the path of the latest folder in the target directory.
+    Update .env file with the path of the latest folder of csv and json in the target directory.
     """
     try:
         all_folders = [
@@ -66,26 +68,34 @@ def update_env_with_latest_folder(env_path: str, variable: str, target_folder: s
         escaped_path = latest_folder.replace("\\", "\\\\")
 
         updated_lines = []
-        variable_found = False
+        variable1found = False
+        variable2found = False
 
         if os.path.exists(env_path):
             with open(env_path, 'r') as file:
                 for line in file:
-                    if line.strip().startswith(variable + " ="):
-                        updated_lines.append(f'{variable} = "{escaped_path}"\n')
-                        variable_found = True
+                    if line.strip().startswith(variable1 + " ="):
+                        updated_lines.append(f'{variable1} = "{escaped_path}"\n')
+                        variable1found = True
+                    elif line.strip().startswith(variable2 + " ="):
+                        updated_lines.append(f'{variable2} = "{escaped_path}\\\\jsons"\n')
+                        variable2found = True
                     else:
                         updated_lines.append(line)
 
-        if not variable_found:
-            updated_lines.append(f'{variable} = "{escaped_path}"\n')
+        if not variable1found:
+            updated_lines.append(f'{variable1} = "{escaped_path}"\n')
+        if not variable2found:
+            print("json not found,printing new")
+            updated_lines.append(f'{variable2} = "{escaped_path}\\\\jsons"\n')
 
         with open(env_path, "w") as file:
             file.writelines(updated_lines)
 
-        logging.info("Updated %s with latest folder: %s", variable, latest_folder)
+        logging.info("Updated %s and %s with latest folder: %s", variable1,variable2, latest_folder)
     except Exception as e:
         logging.exception("Failed to update .env with latest folder path")
+
 
 def run_flow():
     """
@@ -93,18 +103,22 @@ def run_flow():
     """
     try:
         logging.info("Starting ETL flow...")
-
-        update_env_with_latest_folder(ENV_PATH, ENV_VARIABLE, DATA_ROOT_FOLDER)
+        update_env_with_latest_folder(ENV_PATH,ENV_VARIABLE_DATA,ENV_VARIABLE_JSON, DATA_ROOT_FOLDER)
         load_dotenv(override=True)
         data_path = os.getenv("DATA_PATH")
+        json_path = os.getenv("JSON_PATH")
         if not data_path:
             logging.error("DATA_PATH not set in .env")
+            return
+        if not json_path:
+            logging.error("JSON_PATH not set in .env")
             return
 
         savebackups(BACKUP_PATH)
         findnewfiles(FILENAMES_JSON)
         save_feat(data_path)
         run_etl(data_path)
+        # run_json_upload(json_path)
         getEntryCount(TABLE_NAMES_JSON)
 
         logging.info("Data pipeline completed successfully.")
@@ -113,5 +127,7 @@ def run_flow():
         logging.exception("ETL flow failed with an exception.")
 
 # ---------------------- MAIN ------------------------------- #
-if __name__ == "__main__":
-    run_flow()
+# if __name__ == "__main__":
+#     run_flow()
+
+update_env_with_latest_folder(ENV_PATH,ENV_VARIABLE_DATA,ENV_VARIABLE_JSON, DATA_ROOT_FOLDER)
