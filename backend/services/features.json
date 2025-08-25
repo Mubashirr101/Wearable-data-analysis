@@ -136,19 +136,6 @@
             "datauuid",
             "food_info_id"
         ],
-        "com.samsung.health.height": [
-            "create_sh_ver",
-            "start_time",
-            "custom",
-            "height",
-            "modify_sh_ver",
-            "update_time",
-            "create_time",
-            "time_offset",
-            "deviceuuid",
-            "pkg_name",
-            "datauuid"
-        ],
         "com.samsung.health.hrv": [
             "create_sh_ver",
             "start_time",
