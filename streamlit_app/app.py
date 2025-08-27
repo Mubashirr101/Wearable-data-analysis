@@ -26,7 +26,7 @@ class app:
                 col1.header("📆  Daily Stress Chart")
                 stress_date_filter = col2.date_input("stress_Date",value=None,label_visibility='hidden')
                 if stress_date_filter:
-                    df_stress_filtered = df_stress[df_stress["start_time"].dt.date == pd.to_datetime(stress_date_filter).date()]
+                    df_stress_filtered = df_stress[df_stress["start_time"].dt.date == pd.to_datetime(stress_date_filter).date()].copy()
                 else:
                     df_stress_filtered = df_stress.iloc[0:0]
                 stresschart = self.chartTimeData(df_stress_filtered,"start_time","score","Time/Date","Stress Level","⚡ Daily Stress Chart") 
@@ -58,7 +58,7 @@ class app:
                 col5.header("📆  Daily Heart Rate Chart")
                 hr_date_filter = col6.date_input("hr_Date",value=None,label_visibility='hidden')
                 if hr_date_filter:
-                    df_hr_filtered = df_hr[df_hr["heart_rate_start_time"].dt.date == pd.to_datetime(hr_date_filter).date()]
+                    df_hr_filtered = df_hr[df_hr["heart_rate_start_time"].dt.date == pd.to_datetime(hr_date_filter).date()].copy()
                 else:
                     df_hr_filtered = df_hr.iloc[0:0]
                 hrchart = self.chartTimeData(df_hr_filtered,"heart_rate_start_time","heart_rate_heart_rate","Time/Date","Heart-Rate","🫀 Heart-Rate over Time")               
@@ -73,7 +73,6 @@ class app:
                 chartHRBin = pd.DataFrame()
                 if not df_hr_filtered.empty and hr_time_filter != datetime.time(0,0):
                     match2 = df_hr_filtered.loc[df_hr_filtered['heart_rate_start_time'].dt.time == hr_time_filter]
-                    print(match2)                
                     if not match2.empty:
                         hr_jsonFilepath = match2.iloc[0]['jsonPath']
                         df_hr_bin = self.loadBinningjsons(hr_offset_col,hr_jsonFilepath)
