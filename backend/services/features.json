@@ -362,6 +362,23 @@
             "end_time",
             "datauuid"
         ],
+        "com.samsung.shealth.best_records": [
+            "source_id",
+            "device_type",
+            "update_time",
+            "create_time",
+            "source_pkg_name",
+            "date",
+            "type",
+            "value",
+            "is_shown",
+            "extra_data",
+            "extra_type",
+            "deviceuuid",
+            "pkg_name",
+            "controller_id",
+            "datauuid"
+        ],
         "com.samsung.shealth.breathing": [
             "duration",
             "create_sh_ver",
