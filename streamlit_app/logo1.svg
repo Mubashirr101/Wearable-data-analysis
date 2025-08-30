@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Athlete Tracker & Coach — SVG Logo
+  - Fully editable (colors, text) and scalable
+  - Works on light and dark backgrounds (toggle by data-theme="dark")
+  - Contains a horizontal lockup and a square app-icon mark as <symbol>
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 128" width="100%" role="img" aria-labelledby="title desc" data-theme="light">
+  <title id="title">Athlete Tracker &amp; Coach logo</title>
+  <desc id="desc">A minimal logo with a stylized A, heartbeat pulse, and data bars, followed by the brand name text.</desc>
+
+  <style>
+    :root {
+      --primary: #06b6d4; /* cyan */
+      --accent:  #16a34a; /* green */
+      --ink:     #0f172a; /* slate-900 */
+      --muted:   #94a3b8; /* slate-400 */
+      --white:   #ffffff;
+    }
+    svg[data-theme="dark"] { --ink: var(--white); --muted:#94a3b8; }
+
+    .ink   { fill: var(--ink); }
+    .muted { fill: var(--muted); }
+    .pri   { fill: var(--primary); }
+    .acc   { fill: var(--accent); }
+    .stroke-pri { stroke: var(--primary); }
+    .stroke-acc { stroke: var(--accent); }
+    .stroke-ink { stroke: var(--ink); }
+
+    .brand { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Noto Sans", sans-serif;
+             font-weight: 700; letter-spacing: 0.2px; }
+    .sub   { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Noto Sans", sans-serif;
+             font-weight: 500; letter-spacing: 0.3px; }
+  </style>
+
+  <!-- ===== Icon symbol (reusable square mark) ===== -->
+  <symbol id="atc-mark" viewBox="0 0 96 96">
+    <!-- Base circle -->
+    <circle cx="48" cy="48" r="42" fill="none" class="stroke-ink" stroke-width="4" opacity="0.15" />
+
+    <!-- Stylized A: two legs + crossbar (as a pulse-able path) -->
+    <path d="M20 72 L44 20 L68 72" fill="none" class="stroke-pri" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M32 48 L42 48 L48 38 L54 58 L60 48 L64 48" fill="none" class="stroke-acc" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <!-- Mini data bars inside A -->
+    <rect x="28" y="54" width="6" height="12" rx="2" class="pri"/>
+    <rect x="38" y="50" width="6" height="16" rx="2" class="ink" opacity="0.6"/>
+    <rect x="48" y="46" width="6" height="20" rx="2" class="acc"/>
+  </symbol>
+
+  <!-- ===== Horizontal lockup ===== -->
+  <!-- Left: square mark -->
+  <g transform="translate(16,16)">
+    <use href="#atc-mark" width="96" height="96"/>
+  </g>
+
+  <!-- Right: wordmark -->
+  <g transform="translate(128,36)">
+    <!-- Main brand line -->
+    <text class="brand ink" x="0" y="28" font-size="28">Athlete Tracker</text>
+    <text class="brand ink" x="0" y="60" font-size="28">&amp; Coach</text>
+
+    <!-- Tagline (optional; delete if not needed) -->
+    <text class="sub muted" x="0" y="86" font-size="14">Data · Insights · Training</text>
+  </g>
+
+  <!-- ===== Safe bounding guide (hidden) ===== -->
+  <rect x="0" y="0" width="512" height="128" fill="none" stroke="none" />
+</svg>
