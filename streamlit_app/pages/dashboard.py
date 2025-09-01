@@ -10,68 +10,69 @@ import altair as alt
 
     
 def show_dashboard(df_stress,df_hr,supabase_client):
-    with st.spinner('Loading'):
-        p1_tab1,p1_tab2,p1_tab3 = st.tabs(['Stress Graph','Heart-Rate Graph','Steps Graph'])
-        with p1_tab1:                
-            col1,col2 = st.columns([4,2])                           
-            col1.header("📆  Daily Stress Chart")
-            stress_date_filter = col2.date_input("stress_Date",value=None,label_visibility='hidden')
-            if stress_date_filter:
-                df_stress_filtered = df_stress[df_stress["start_time"].dt.date == pd.to_datetime(stress_date_filter).date()].copy()
-            else:
-                df_stress_filtered = df_stress.iloc[0:0]
-            stresschart = chartTimeData(df_stress_filtered,"start_time","score","Time/Date","Stress Level","⚡ Daily Stress Chart") 
-            st.altair_chart(stresschart,use_container_width=True)
-            ############################################################################                                
-            col3,col4 = st.columns([4,2])
-            col3.header("⌚  Hourly Stress Chart")
-            stress_time_filter = col4.time_input("stress_Time",value=datetime.time(0,0),step = 3600,label_visibility='hidden')
-            stess_offset_col = df_stress["time_offset"]                
-            stress_jsonFilepath = None
-            df_stress_bin = None
-            chartStressBin = pd.DataFrame()
-            if not df_stress_filtered.empty and stress_time_filter != datetime.time(0,0):
-                match = df_stress_filtered.loc[df_stress_filtered['start_time'].dt.time == stress_time_filter]                
-                if not match.empty:
-                    stress_jsonFilepath = match.iloc[0]['jsonPath']
+    p1_tab1,p1_tab2,p1_tab3 = st.tabs(['Stress Graph','Heart-Rate Graph','Steps Graph'])
+    with p1_tab1:                
+        col1,col2 = st.columns([4,2])                           
+        col1.header("📆  Daily Stress Chart")
+        stress_date_filter = col2.date_input("stress_Date",value=None,label_visibility='hidden')
+        if stress_date_filter:
+            df_stress_filtered = df_stress[df_stress["start_time"].dt.date == pd.to_datetime(stress_date_filter).date()].copy()
+        else:
+            df_stress_filtered = df_stress.iloc[0:0]
+        stresschart = chartTimeData(df_stress_filtered,"start_time","score","Time/Date","Stress Level","⚡ Daily Stress Chart") 
+        st.altair_chart(stresschart,use_container_width=True)
+        ############################################################################                                
+        col3,col4 = st.columns([4,2])
+        col3.header("⌚  Hourly Stress Chart")
+        stress_time_filter = col4.time_input("stress_Time",value=datetime.time(0,0),step = 3600,label_visibility='hidden')
+        stess_offset_col = df_stress["time_offset"]                
+        stress_jsonFilepath = None
+        df_stress_bin = None
+        chartStressBin = pd.DataFrame()
+        if not df_stress_filtered.empty and stress_time_filter != datetime.time(0,0):
+            match = df_stress_filtered.loc[df_stress_filtered['start_time'].dt.time == stress_time_filter]                
+            if not match.empty:
+                stress_jsonFilepath = match.iloc[0]['jsonPath']
+                with st.spinner("Fetching stress details..."):
                     df_stress_bin = loadBinningjsons(stess_offset_col,stress_jsonFilepath,supabase_client)
                     chartStressBin = chartBinningjsons(df_stress_bin,"start_time","Time","score","Stress Level","score_min","score_max")
-                else:
-                    st.info("No Data found for the selected time.")
             else:
-                st.info("Please select a date & time")
-                
-            st.altair_chart(chartStressBin,use_container_width=True)
-        with p1_tab2:      
-            col5,col6 = st.columns([4,2])
-                               
-            col5.header("📆  Daily Heart Rate Chart")
-            hr_date_filter = col6.date_input("hr_Date",value=None,label_visibility='hidden')
-            if hr_date_filter:
-                df_hr_filtered = df_hr[df_hr["heart_rate_start_time"].dt.date == pd.to_datetime(hr_date_filter).date()].copy()
-            else:
-                df_hr_filtered = df_hr.iloc[0:0]
-            hrchart = chartTimeData(df_hr_filtered,"heart_rate_start_time","heart_rate_heart_rate","Time/Date","Heart-Rate","🫀 Heart-Rate over Time")               
-            st.altair_chart(hrchart,use_container_width=True)
-            ############################################################################                                
-            col7,col8 = st.columns([4,2])
-            col7.header("⌚  Hourly Heart Rate Chart")
-            hr_time_filter = col8.time_input("hr_Time",value=datetime.time(0,0),step = 3600,label_visibility='hidden')
-            hr_offset_col = df_hr["heart_rate_time_offset"]                
-            hr_jsonFilepath = None
-            df_hr_bin = None
-            chartHRBin = pd.DataFrame()
-            if not df_hr_filtered.empty and hr_time_filter != datetime.time(0,0):
-                match2 = df_hr_filtered.loc[df_hr_filtered['heart_rate_start_time'].dt.time == hr_time_filter]
-                if not match2.empty:
-                    hr_jsonFilepath = match2.iloc[0]['jsonPath']
+                st.info("No Data found for the selected time.")
+        else:
+            st.info("Please select a date & time")
+            
+        st.altair_chart(chartStressBin,use_container_width=True)
+    with p1_tab2:      
+        col5,col6 = st.columns([4,2])
+                            
+        col5.header("📆  Daily Heart Rate Chart")
+        hr_date_filter = col6.date_input("hr_Date",value=None,label_visibility='hidden')
+        if hr_date_filter:
+            df_hr_filtered = df_hr[df_hr["heart_rate_start_time"].dt.date == pd.to_datetime(hr_date_filter).date()].copy()
+        else:
+            df_hr_filtered = df_hr.iloc[0:0]
+        hrchart = chartTimeData(df_hr_filtered,"heart_rate_start_time","heart_rate_heart_rate","Time/Date","Heart-Rate","🫀 Heart-Rate over Time")               
+        st.altair_chart(hrchart,use_container_width=True)
+        ############################################################################                                
+        col7,col8 = st.columns([4,2])
+        col7.header("⌚  Hourly Heart Rate Chart")
+        hr_time_filter = col8.time_input("hr_Time",value=datetime.time(0,0),step = 3600,label_visibility='hidden')
+        hr_offset_col = df_hr["heart_rate_time_offset"]                
+        hr_jsonFilepath = None
+        df_hr_bin = None
+        chartHRBin = pd.DataFrame()
+        if not df_hr_filtered.empty and hr_time_filter != datetime.time(0,0):
+            match2 = df_hr_filtered.loc[df_hr_filtered['heart_rate_start_time'].dt.time == hr_time_filter]
+            if not match2.empty:
+                hr_jsonFilepath = match2.iloc[0]['jsonPath']
+                with st.spinner("Fetching heart rate details..."):
                     df_hr_bin = loadBinningjsons(hr_offset_col,hr_jsonFilepath)
                     chartHRBin = chartBinningjsons(df_hr_bin,"start_time","Time","heart_rate","Heart Rate","heart_rate_min","heart_rate_max")
-                else:
-                    st.info("No Data found for the selected time.")
             else:
-                st.info("Please select a date & time")                    
-            st.altair_chart(chartHRBin,use_container_width=True)
+                st.info("No Data found for the selected time.")
+        else:
+            st.info("Please select a date & time")                    
+        st.altair_chart(chartHRBin,use_container_width=True)
 
 
 def chartTimeData(df,xval,yval,xtitle,ytitle,chart_title):

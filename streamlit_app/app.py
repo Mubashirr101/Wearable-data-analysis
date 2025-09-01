@@ -9,35 +9,61 @@ from sqlalchemy import create_engine, text
 from supabase import create_client
 from streamlit_navigation_bar import st_navbar
 import pages as pg 
+# -------------------- Cache -----------------------#
+@st.cache_resource
+def get_supabase_client():
+    load_dotenv()
+    url = os.getenv("url")
+    key = os.getenv("key")
+    return create_client(url, key)
 
-class App:
-    def __init__(self):
-        self.stress_df, self.hr_df, self.supabase_client = self.loadCache()
-        self.run()
-    def loadCache(self):
-        with st.spinner('Loading Cache'):
-            load_dotenv()
-            engine = create_engine(f"postgresql+psycopg2://{os.getenv("user")}:{urllib.parse.quote_plus(os.getenv("password"))}@{os.getenv("host")}:{os.getenv("port")}/{os.getenv("dbname")}") 
-            # gets stress data
-            df_stress = self.querySupabase(engine,"start_time","score","time_offset","stress","binning_data") 
-            df_stress['jsonPath'] = "com.samsung.shealth.stress/" + df_stress['binning_data'].str[0] + "/" + df_stress["binning_data"]
-
-            # gets HR data
-            df_hr = self.querySupabase(engine,"heart_rate_start_time","heart_rate_heart_rate","heart_rate_time_offset","tracker_heart_rate","heart_rate_binning_data") 
-            df_hr['jsonPath'] = "com.samsung.shealth.tracker.heart_rate/" + df_hr['heart_rate_binning_data'].str[0] + "/" + df_hr["heart_rate_binning_data"] 
-
-            # making supabase client to fetch jsons
-            url = os.getenv("url")
-            key = os.getenv("key")
-            supabase = create_client(url,key)
-
-        return df_stress,df_hr,supabase
-
-    def querySupabase(self,engine,xvar,yvar,offset,table,binningjson):
+def querySupabase(engine,xvar,yvar,offset,table,binningjson):
         query = text(f"SELECT {xvar},{yvar},{offset},{binningjson} FROM {table}")
         with engine.connect() as conn:
             df = pd.read_sql(query,conn,)
         return df
+
+@st.cache_data
+def get_stress_df(engine):
+    df_stress = querySupabase(engine,"start_time","score","time_offset","stress","binning_data") 
+    df_stress['jsonPath'] = "com.samsung.shealth.stress/" + df_stress['binning_data'].str[0] + "/" + df_stress["binning_data"]
+    return df_stress
+
+@st.cache_data
+def get_hr_df(engine):
+    df_hr = querySupabase(engine,"heart_rate_start_time","heart_rate_heart_rate","heart_rate_time_offset","tracker_heart_rate","heart_rate_binning_data") 
+    df_hr['jsonPath'] = "com.samsung.shealth.tracker.heart_rate/" + df_hr['heart_rate_binning_data'].str[0] + "/" + df_hr["heart_rate_binning_data"] 
+    return df_hr
+
+@st.cache_resource
+def get_engine():
+    load_dotenv()
+    return create_engine(
+        f"postgresql+psycopg2://{os.getenv("user")}:{urllib.parse.quote_plus(os.getenv("password"))}@{os.getenv("host")}:{os.getenv("port")}/{os.getenv("dbname")}"
+    )
+
+# ---------------------- warmup -------------------------#
+@st.cache_resource
+def warmup():
+    """"Force all heavy cached resources to load once at startup."""
+    engine = get_engine()
+    supabase_client = get_supabase_client()
+    stress_df = get_stress_df(engine)
+    hr_df = get_hr_df(engine)
+    return engine,supabase_client,stress_df,hr_df
+    
+
+class App:
+    def __init__(self):
+        with st.spinner("Loading Cache...."):
+            self.engine,self.supabase_client,self.stress_df,self.hr_df = warmup()
+        self.run()
+  
+    # def querySupabase(self,engine,xvar,yvar,offset,table,binningjson):
+    #     query = text(f"SELECT {xvar},{yvar},{offset},{binningjson} FROM {table}")
+    #     with engine.connect() as conn:
+    #         df = pd.read_sql(query,conn,)
+    #     return df
         
     def run(self):
         st.set_page_config(layout='wide',page_title='Athlete Tracker',initial_sidebar_state='collapsed')
