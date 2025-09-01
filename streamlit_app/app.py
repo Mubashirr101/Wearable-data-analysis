@@ -86,6 +86,7 @@ class App:
             'nav': {
                 'background-color':'#2E3847',
                 'justify-content' : 'left',
+                'margin-bottom' : '1px',
             },
             'img': {
                 'margin-left':'25px',
