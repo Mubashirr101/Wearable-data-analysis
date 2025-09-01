@@ -9,6 +9,7 @@ from sqlalchemy import create_engine, text
 from supabase import create_client
 from streamlit_navigation_bar import st_navbar
 import pages as pg 
+import datetime
 # -------------------- Cache -----------------------#
 @st.cache_resource
 def get_supabase_client():
@@ -24,13 +25,15 @@ def querySupabase(engine,xvar,yvar,offset,table,binningjson):
         return df
 
 @st.cache_data
-def get_stress_df(engine):
+def get_stress_df():
+    engine = get_engine()
     df_stress = querySupabase(engine,"start_time","score","time_offset","stress","binning_data") 
     df_stress['jsonPath'] = "com.samsung.shealth.stress/" + df_stress['binning_data'].str[0] + "/" + df_stress["binning_data"]
     return df_stress
 
 @st.cache_data
-def get_hr_df(engine):
+def get_hr_df():
+    engine = get_engine()
     df_hr = querySupabase(engine,"heart_rate_start_time","heart_rate_heart_rate","heart_rate_time_offset","tracker_heart_rate","heart_rate_binning_data") 
     df_hr['jsonPath'] = "com.samsung.shealth.tracker.heart_rate/" + df_hr['heart_rate_binning_data'].str[0] + "/" + df_hr["heart_rate_binning_data"] 
     return df_hr
@@ -46,27 +49,35 @@ def get_engine():
 @st.cache_resource
 def warmup():
     """"Force all heavy cached resources to load once at startup."""
-    engine = get_engine()
     supabase_client = get_supabase_client()
-    stress_df = get_stress_df(engine)
-    hr_df = get_hr_df(engine)
-    return engine,supabase_client,stress_df,hr_df
+    stress_df = get_stress_df()
+    hr_df = get_hr_df()
+    return supabase_client,stress_df,hr_df
     
-
+session = st.session_state
+for k in session.keys():
+    session[k] = session[k]
 class App:
     def __init__(self):
         with st.spinner("Loading Cache...."):
-            self.engine,self.supabase_client,self.stress_df,self.hr_df = warmup()
-        self.run()
-  
-    # def querySupabase(self,engine,xvar,yvar,offset,table,binningjson):
-    #     query = text(f"SELECT {xvar},{yvar},{offset},{binningjson} FROM {table}")
-    #     with engine.connect() as conn:
-    #         df = pd.read_sql(query,conn,)
-    #     return df
+            self.supabase_client,self.stress_df,self.hr_df = warmup()
+        self.run()    
         
     def run(self):
         st.set_page_config(layout='wide',page_title='Athlete Tracker',initial_sidebar_state='collapsed')
+        if 'initialized' not in st.session_state:
+            st.session_state.setdefault("stress_date_filter", None)
+            st.session_state.setdefault("stress_time_filter", datetime.time(0, 0))
+            st.session_state.setdefault("hr_date_filter", None)
+            st.session_state.setdefault("hr_time_filter", datetime.time(0, 0))
+            # caches
+            st.session_state.setdefault("df_stress_filtered", pd.DataFrame())
+            st.session_state.setdefault("df_hr_filtered", pd.DataFrame())
+            st.session_state.setdefault("json_cache", {})        # mapping jsonPath -> DataFrame
+            st.session_state.setdefault("last_stress_bin_df", None)
+        #     st.session_state.setdefault("last_hr_bin_df", None)
+            st.session_state["initialized"] = True
+
         pages = ["Dashboard","Activity","Coach","More","Github"]
         parent_dir = os.path.dirname(os.path.abspath(__file__))
         logo_path = os.path.join(parent_dir,"home_light.svg")
