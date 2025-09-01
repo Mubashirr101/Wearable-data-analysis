@@ -1,20 +1,44 @@
 import streamlit as st
+import streamlit as st
 import pandas as pd
 import numpy as np
 import os,json
-import datetime
 import urllib.parse
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
-import re
-from datetime import timedelta
-import altair as alt
 from supabase import create_client
 from streamlit_navigation_bar import st_navbar
-import pages as pg
+import pages as pg 
+
 class App:
     def __init__(self):
+        self.stress_df, self.hr_df, self.supabase_client = self.loadCache()
         self.run()
+    def loadCache(self):
+        with st.spinner('Loading Cache'):
+            load_dotenv()
+            engine = create_engine(f"postgresql+psycopg2://{os.getenv("user")}:{urllib.parse.quote_plus(os.getenv("password"))}@{os.getenv("host")}:{os.getenv("port")}/{os.getenv("dbname")}") 
+            # gets stress data
+            df_stress = self.querySupabase(engine,"start_time","score","time_offset","stress","binning_data") 
+            df_stress['jsonPath'] = "com.samsung.shealth.stress/" + df_stress['binning_data'].str[0] + "/" + df_stress["binning_data"]
+
+            # gets HR data
+            df_hr = self.querySupabase(engine,"heart_rate_start_time","heart_rate_heart_rate","heart_rate_time_offset","tracker_heart_rate","heart_rate_binning_data") 
+            df_hr['jsonPath'] = "com.samsung.shealth.tracker.heart_rate/" + df_hr['heart_rate_binning_data'].str[0] + "/" + df_hr["heart_rate_binning_data"] 
+
+            # making supabase client to fetch jsons
+            url = os.getenv("url")
+            key = os.getenv("key")
+            supabase = create_client(url,key)
+
+        return df_stress,df_hr,supabase
+
+    def querySupabase(self,engine,xvar,yvar,offset,table,binningjson):
+        query = text(f"SELECT {xvar},{yvar},{offset},{binningjson} FROM {table}")
+        with engine.connect() as conn:
+            df = pd.read_sql(query,conn,)
+        return df
+        
     def run(self):
         st.set_page_config(layout='wide',page_title='Athlete Tracker',initial_sidebar_state='collapsed')
         pages = ["Dashboard","Activity","Coach","More","Github"]
@@ -59,7 +83,7 @@ class App:
 
         functions = {
             'Home': pg.show_home,
-            'Dashboard':pg.show_dashboard,
+            'Dashboard':lambda: pg.show_dashboard(self.stress_df,self.hr_df,self.supabase_client),
             'Activity':pg.show_activity,
             'Coach':pg.show_coach,
             'More':pg.show_more,

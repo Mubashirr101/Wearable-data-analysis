@@ -142,7 +142,7 @@ def run_flow():
             logging.error("JSON_PATH not set in .env")
             return
         ## connect the DB, 2 options -> local OR supabase
-        conn = get_connection("local")        
+        conn = get_connection("supabase")        
         ## run scripts
         savebackups(BACKUP_PATH)
         findnewfiles(FILENAMES_JSON)
