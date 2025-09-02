@@ -65,6 +65,21 @@ class App:
         
     def run(self):
         st.set_page_config(layout='wide',page_title='Athlete Tracker',initial_sidebar_state='collapsed')
+        # Inject CSS to remove the space between navbar and title
+        st.markdown(
+            """
+            <style>
+            .block-container {
+                padding-top: 0rem !important; /* remove top padding */
+                margin-top: 0rem !important;
+            }
+            .st-emotion-cache-p6n0jw {
+                gap: 0rem !important;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
         if 'initialized' not in st.session_state:
             st.session_state.setdefault("stress_date_filter", None)
             st.session_state.setdefault("stress_time_filter", datetime.time(0, 0))
@@ -90,7 +105,7 @@ class App:
             },
             'img': {
                 'margin-left':'25px',
-                'margin-right':'300px',
+                'margin-right':'30px',
                 'padding-right' :'13px',
             },
             'span': {
@@ -110,7 +125,7 @@ class App:
             'show_menu' : False,
             'show_sidebar':False,
         }
-
+        
         page = st_navbar(
             pages,
             logo_path = logo_path,
