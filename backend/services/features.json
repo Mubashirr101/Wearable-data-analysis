@@ -352,6 +352,43 @@
             "end_time",
             "datauuid"
         ],
+        "com.samsung.shealth.best_records": [
+            "source_id",
+            "device_type",
+            "update_time",
+            "create_time",
+            "source_pkg_name",
+            "date",
+            "type",
+            "value",
+            "is_shown",
+            "extra_data",
+            "extra_type",
+            "deviceuuid",
+            "pkg_name",
+            "controller_id",
+            "datauuid"
+        ],
+        "com.samsung.shealth.breathing": [
+            "duration",
+            "create_sh_ver",
+            "start_time",
+            "exhale_hold_duration",
+            "custom",
+            "modify_sh_ver",
+            "update_time",
+            "create_time",
+            "exhale_duration",
+            "type",
+            "cycle",
+            "time_offset",
+            "deviceuuid",
+            "inhale_hold_duration",
+            "pkg_name",
+            "end_time",
+            "datauuid",
+            "inhale_duration"
+        ],
         "com.samsung.shealth.calories_burned.details": [
             "active_calories_goal",
             "version",
@@ -500,6 +537,20 @@
             "program_uuid",
             "datauuid"
         ],
+        "com.samsung.shealth.exercise.recovery_heart_rate": [
+            "create_sh_ver",
+            "start_time",
+            "modify_sh_ver",
+            "update_time",
+            "create_time",
+            "time_offset",
+            "deviceuuid",
+            "exercise_id",
+            "pkg_name",
+            "end_time",
+            "datauuid",
+            "heart_rate"
+        ],
         "com.samsung.shealth.exercise.routine": [
             "total_average_hr",
             "start_time",
@@ -550,6 +601,20 @@
             "icon_info_id",
             "datauuid"
         ],
+        "com.samsung.shealth.food_favorite": [
+            "amount",
+            "food_type",
+            "update_time",
+            "create_time",
+            "name",
+            "unit",
+            "favoriteid",
+            "calorie",
+            "deviceuuid",
+            "pkg_name",
+            "datauuid",
+            "food_info_id"
+        ],
         "com.samsung.shealth.food_frequent": [
             "eveningsnack_count",
             "update_time",
@@ -572,6 +637,18 @@
             "shealth_data_type",
             "deviceuuid",
             "pkg_name",
+            "datauuid"
+        ],
+        "com.samsung.shealth.insight.message_notification": [
+            "message_id",
+            "device_type",
+            "status",
+            "update_time",
+            "create_time",
+            "time_offset",
+            "deviceuuid",
+            "pkg_name",
+            "issue_time",
             "datauuid"
         ],
         "com.samsung.shealth.mood": [
