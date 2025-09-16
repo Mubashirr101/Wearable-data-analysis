@@ -92,6 +92,7 @@ class App:
             st.session_state.setdefault("last_stress_bin_df", None)
             st.session_state.setdefault("last_hr_bin_df", None)
             st.session_state.setdefault("activity_df",None)
+            st.session_state.setdefault("current_file_hash", None)
             st.session_state["initialized"] = True
 
         pages = ["Dashboard","Activity","Coach","More","Github"]

@@ -12,110 +12,134 @@ session = st.session_state
 for k in session.keys():
     session[k] = session[k]
 
-def show_dashboard(df_stress,df_hr,supabase_client):
-    p1_tab1,p1_tab2,p1_tab3 = st.tabs(['Stress Graph','Heart-Rate Graph','Steps Graph'])
 
-    # --------------------STRESS TAB------------------------------------#
-    with p1_tab1:                
-        col1,col2 = st.columns([4,2])                           
-        col1.header("📆🧠  Daily Stress Chart")
+def render_metric_tab(tab,metric_name,df,config,supabase_client=None):
+    with tab:
+        col1,col2 = st.columns([4,2])
+        col1.header(f"{config['daily_icon']} Daily {config['title']} Chart")
 
-        # Widget: Date input
-        stress_date_filter = col2.date_input(
-            "stress_Date",
-            key="stress_date_filter",
+        #date inpt
+        date_filter = col2.date_input(
+            f'{metric_name}_Date',
+            key = f"{metric_name}_date_filter",
             label_visibility="hidden"
         )
 
-        if stress_date_filter:
-            df_stress_filtered = df_stress[df_stress["start_time"].dt.date == pd.to_datetime(stress_date_filter).date()].copy()
-            st.session_state["df_state_filtered"] = df_stress_filtered
+        if date_filter:
+            df_filtered = df[df[config["start_time"]].dt.date == pd.to_datetime(date_filter).date()].copy()
+            st.session_state[f"df_{metric_name}_filtered"] = df_filtered
         else:
-            df_stress_filtered = df_stress.iloc[0:0]
-        stresschart = chartTimeData(df_stress_filtered,"start_time","score","Time/Date","Stress Level","⚡ Daily Stress Chart") 
-        st.altair_chart(stresschart,use_container_width=True)
-        ############################################################################                                
-        col3,col4 = st.columns([4,2])
-        col3.header("⌚🧠  Hourly Stress Chart")
-        stress_time_filter = col4.time_input("stress_Time",key='stress_time_filter',step = 3600,label_visibility='hidden')
-        stress_jsonFilepath = None
-        df_stress_bin = None
-        chartStressBin = pd.DataFrame()
-        if not df_stress_filtered.empty and stress_time_filter != datetime.time(0,0):
-            match = df_stress_filtered.loc[df_stress_filtered['start_time'].dt.time == stress_time_filter]                
+            df_filtered = df.iloc[0:0]
+        
+        # Daily chart
+        chart_daily = chartTimeData(
+            df_filtered,
+            config["start_time"],
+            config["value"],
+            "Time/Date",
+            config["y_label"],
+            f"{config['daily_icon']} {config['title']} over Time"
+        )
+
+        st.altair_chart(chart_daily,use_container_width=True)
+
+        # Huurly chart
+        col3, col4 = st.columns([4, 2])
+        col3.header(f"{config['hourly_icon']}  Hourly {config['title']} Chart")
+        time_filter = col4.time_input(
+            f"{metric_name}_Time",
+            key=f"{metric_name}_time_filter",
+            step=3600,
+            label_visibility="hidden"
+        )
+
+        jsonFilepath = None
+        df_bin = None
+        chartBin = pd.DataFrame()
+
+        if not df_filtered.empty and time_filter != datetime.time(0, 0):
+            match = df_filtered.loc[df_filtered[config["start_time"]].dt.time == time_filter]
             if not match.empty:
-                stress_jsonFilepath = match.iloc[0]['jsonPath']
-                # use json cache to avoid redownloading
-                json_cache = st.session_state.setdefault("json_cache",{})
-
-                if stress_jsonFilepath in json_cache:
-                    df_stress_bin = json_cache[stress_jsonFilepath]
+                jsonFilepath = match.iloc[0]['jsonPath']
+                # cache json
+                json_cache = st.session_state.setdefault("json_cache", {})
+                if jsonFilepath in json_cache:
+                    df_bin = json_cache[jsonFilepath]
                 else:
-                    with st.spinner("Fetching stress details..."):
-                        df_stress_bin = loadBinningjsons(df_stress["time_offset"],stress_jsonFilepath,supabase_client)
-                        json_cache[stress_jsonFilepath] = df_stress_bin
+                    with st.spinner(f"Fetching {config['title']} details..."):
+                        df_bin = loadBinningjsons(df[config["time_offset"]], jsonFilepath, supabase_client)
+                        json_cache[jsonFilepath] = df_bin
 
-                st.session_state['last_stress_bin_df']  = df_stress_bin
-                chartStressBin = chartBinningjsons(df_stress_bin,"start_time","Time","score","Stress Level","score_min","score_max")
+                st.session_state[f"last_{metric_name}_bin_df"] = df_bin
+                chartBin = chartBinningjsons(
+                    df_bin,
+                    "start_time",
+                    "Time",
+                    config["value_bin"],
+                    config["y_label"],
+                    config["min"],
+                    config["max"]
+                )
             else:
                 st.info("No Data found for the selected time.")
         else:
             st.info("Please select a date & time")
-        # retriving the json chart data from session if present        
-        if 'stress_chartBin' not in st.session_state:
-            st.session_state.stress_chartBin = pd.DataFrame()
 
-        st.session_state.stress_chartBin = chartStressBin            
-        st.altair_chart(st.session_state.stress_chartBin,use_container_width=True)
-    # ----------------------HR TAB----------------------#
-    with p1_tab2:      
-        col5,col6 = st.columns([4,2])                            
-        col5.header("📆🫀  Daily Heart Rate Chart")
-     
-        # Widget: Date input
-        hr_date_filter = col6.date_input("hr_Date",key='hr_date_filter',label_visibility='hidden')
+        # Session state save
+        if f"{metric_name}_chartBin" not in st.session_state:
+            st.session_state[f"{metric_name}_chartBin"] = pd.DataFrame()
 
-        if hr_date_filter:
-            df_hr_filtered = df_hr[df_hr["heart_rate_start_time"].dt.date == pd.to_datetime(hr_date_filter).date()].copy()
-            st.session_state['df_hr_filtered'] = df_hr_filtered
-        else:
-            df_hr_filtered = df_hr.iloc[0:0]
-        hrchart = chartTimeData(df_hr_filtered,"heart_rate_start_time","heart_rate_heart_rate","Time/Date","Heart-Rate","🫀 Heart-Rate over Time")               
-        st.altair_chart(hrchart,use_container_width=True)
-        ############################################################################                                
-        col7,col8 = st.columns([4,2])
-        col7.header("⌚🫀  Hourly Heart Rate Chart")
-        hr_time_filter = col8.time_input("hr_Time",key='hr_time_filter',step = 3600,label_visibility='hidden')
-        hr_jsonFilepath = None
-        df_hr_bin = None
-        chartHRBin = pd.DataFrame()
-        if not df_hr_filtered.empty and hr_time_filter != datetime.time(0,0):
-            match2 = df_hr_filtered.loc[df_hr_filtered['heart_rate_start_time'].dt.time == hr_time_filter]
-            if not match2.empty:
-                hr_jsonFilepath = match2.iloc[0]['jsonPath']
-                # use json cache to avoid redownloading
-                json_cache = st.session_state.setdefault("json_cache",{})
+        st.session_state[f"{metric_name}_chartBin"] = chartBin
+        st.altair_chart(st.session_state[f"{metric_name}_chartBin"], use_container_width=True)
+    
+############ MAIN DASHBOARD #############
+def show_dashboard(df_stress,df_hr,supabase_client):
+    p1_tab1,p1_tab2,p1_tab3,p1_tab4,p1_tab5 = st.tabs(['Stress Graph','Heart-Rate Graph','SpO2 Graph','Steps Graph','Calorie Graph'])
 
-                if hr_jsonFilepath in json_cache:
-                    df_hr_bin = json_cache[hr_jsonFilepath]
-                else:
-                    with st.spinner("Fetching heart rate details..."):
-                        df_hr_bin = loadBinningjsons(df_hr["heart_rate_time_offset"] ,hr_jsonFilepath,supabase_client)
-                        json_cache[hr_time_filter] = df_hr_bin
-                
-                st.session_state['last_hr_bin_df'] = df_hr_bin
-                chartHRBin = chartBinningjsons(df_hr_bin,"start_time","Time","heart_rate","Heart Rate","heart_rate_min","heart_rate_max")                
+    configs = {
+        "stress": {
+            "title": "Stress",
+            "daily_icon": "📆🧠",
+            "hourly_icon": "⌚🧠",
+            "start_time": "start_time",
+            "time_offset": "time_offset",
+            "value": "score",
+            "value_bin": "score",
+            "y_label": "Stress Level",
+            "min": "score_min",
+            "max": "score_max"
+        },
+        "hr": {
+            "title": "Heart Rate",
+            "daily_icon": "📆🫀",
+            "hourly_icon": "⌚🫀",
+            "start_time": "heart_rate_start_time",
+            "time_offset": "heart_rate_time_offset",
+            "value": "heart_rate_heart_rate",
+            "value_bin": "heart_rate",
+            "y_label": "Heart Rate",
+            "min": "heart_rate_min",
+            "max": "heart_rate_max"
+        },
+        # "spo2": {
+        #     "title": "SpO₂",
+        #     "daily_icon": "📆🩸",
+        #     "hourly_icon": "⌚🩸",
+        #     "start_time": "spo2_start_time",
+        #     "time_offset": "spo2_time_offset",
+        #     "value": "spo2_spo2",
+        #     "value_bin": "spo2",
+        #     "y_label": "SpO₂",
+        #     "min": "spo2_min",
+        #     "max": "spo2_max"
+        # },
+        # to add steps, calorie later with same structure
+    }
 
-            else:
-                st.info("No Data found for the selected time.")
-        else:
-            st.info("Please select a date & time")  
-
-        # retriving the json chart data from session if present
-        if 'hr_chartBin' not in st.session_state:
-            st.session_state.hr_chartBin = pd.DataFrame()        
-        st.session_state.hr_chartBin = chartHRBin                          
-        st.altair_chart(st.session_state.hr_chartBin,use_container_width=True)
+    render_metric_tab(p1_tab1,"stress",df_stress,configs["stress"],supabase_client)
+    render_metric_tab(p1_tab2,"hr",df_hr,configs["hr"],supabase_client)
+    # render_metric_tab(p1_tab3,"spo2",df_spo2,configs["spo2"],supabase_client)
+    # to add steps and cals
 
 
 def chartTimeData(df,xval,yval,xtitle,ytitle,chart_title):
@@ -183,4 +207,3 @@ def chartBinningjsons(dfJson,xval,xtitle,yval,ytitle,yminval,ymaxval):
         height = 400,
     )
     return chartBin
-
