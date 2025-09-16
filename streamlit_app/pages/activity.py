@@ -10,6 +10,7 @@ import numpy as np
 from math import radians, sin, cos, sqrt, atan2
 from branca.element import Template, MacroElement
 from jinja2 import Template
+import hashlib
 
 # Initialize session state for map persistence
 if 'map_center' not in st.session_state:
@@ -22,6 +23,9 @@ if 'activity_df' not in st.session_state:
     st.session_state.activity_df = None
 if 'current_file_hash' not in st.session_state:
     st.session_state.current_file_hash = None
+# new flag: record that we've fitted the map once for this file
+if 'map_fitted_for_file' not in st.session_state:
+    st.session_state.map_fitted_for_file = False
 
 def show_activity():
     st.header('Activity')
@@ -144,11 +148,16 @@ def show_activity():
                     center = st.session_state.map_center
                     zoom = st.session_state.map_zoom
                     fit_bounds = False
-                else:
-                    # Fit to the route bounds
+                elif not st.session_state.map_fitted_for_file:
+                    # first time fit for this file only
                     center = [df["lat"].mean(), df["lon"].mean()]
                     zoom = 13
                     fit_bounds = True
+                else:
+                    # neither user interacted nor first-fit needed -> reuse sensible center
+                    center = [df["lat"].mean(), df["lon"].mean()]
+                    zoom = 13
+                    fit_bounds = False
 
                 m = folium.Map(location=center, zoom_start=zoom, tiles="OpenStreetMap")
                 folium.PolyLine(coords, color="blue", weight=3).add_to(m)
@@ -169,7 +178,9 @@ def show_activity():
                     returned_objects=["bounds", "center", "zoom"],
                     key="activity_map"
                 )
-
+                # If we fitted this run, mark fitted so future reruns won't re-fit
+                if fit_bounds:
+                    st.session_state.map_fitted_for_file = True
                 # Update session state with map interactions
                 if map_data and "center" in map_data:
                     st.session_state.map_center = [map_data["center"]["lat"], map_data["center"]["lng"]]
@@ -199,14 +210,15 @@ def show_activity():
         )
 
         # Check if a new file was uploaded
-        current_file_hash = hash(str(uploaded_file)) if uploaded_file else None
+        current_file_hash = hashlib.md5(uploaded_file.getvalue()).hexdigest() if uploaded_file else None
         
-        # Reset map state if a new file is uploaded
+        # Reset map state only if a new file is uploaded
         if (uploaded_file is not None and 
             st.session_state.current_file_hash != current_file_hash):
             st.session_state.map_center = None
             st.session_state.map_zoom = None
             st.session_state.map_user_interacted = False
+            st.session_state.map_fitted_for_file = False   # <-- reset fit flag on new file            
             st.session_state.current_file_hash = current_file_hash
 
         # Process uploaded file or use existing data
