@@ -18,8 +18,11 @@ def get_supabase_client():
     key = os.getenv("key")
     return create_client(url, key)
 
-def querySupabase(engine,xvar,yvar,offset,table,binningjson):
-        query = text(f"SELECT {xvar},{yvar},{offset},{binningjson} FROM {table}")
+def querySupabase(engine,xvar,yvar,offset,table,binningjson=""):
+        if binningjson == "":
+            query = text(f"SELECT {xvar},{yvar},{offset} FROM {table}")
+        else:
+            query = text(f"SELECT {xvar},{yvar},{offset},{binningjson} FROM {table}")
         with engine.connect() as conn:
             df = pd.read_sql(query,conn,)
         return df
@@ -38,6 +41,22 @@ def get_hr_df():
     df_hr['jsonPath'] = "com.samsung.shealth.tracker.heart_rate/" + df_hr['heart_rate_binning_data'].str[0] + "/" + df_hr["heart_rate_binning_data"] 
     return df_hr
 
+@st.cache_data
+def get_spo2_df():
+    engine = get_engine()
+    df_spo2 = querySupabase(engine,"oxygen_saturation_start_time","oxygen_saturation_spo2","oxygen_saturation_time_offset","tracker_oxygen_saturation","oxygen_saturation_binning") 
+    if df_spo2['oxygen_saturation_binning'].notna().any():
+        df_spo2['jsonPath'] = "com.samsung.shealth.tracker.oxygen_saturation/" + df_spo2['oxygen_saturation_binning'].str[0] + "/" + df_spo2["oxygen_saturation_binning"] 
+    else:
+        df_spo2['jsonPath'] = ""     
+    return df_spo2
+
+@st.cache_data
+def get_steps_df():
+    engine = get_engine()
+    df_steps = querySupabase(engine,"step_count_start_time","step_count_count","step_count_time_offset","tracker_pedometer_step_count")    
+    return df_steps
+
 @st.cache_resource
 def get_engine():
     load_dotenv()
@@ -52,7 +71,9 @@ def warmup():
     supabase_client = get_supabase_client()
     stress_df = get_stress_df()
     hr_df = get_hr_df()
-    return supabase_client,stress_df,hr_df
+    spo2_df = get_spo2_df()
+    steps_df = get_steps_df()
+    return supabase_client,stress_df,hr_df,spo2_df,steps_df
     
 session = st.session_state
 for k in session.keys():
@@ -60,7 +81,7 @@ for k in session.keys():
 class App:
     def __init__(self):
         with st.spinner("Loading Cache...."):
-            self.supabase_client,self.stress_df,self.hr_df = warmup()
+            self.supabase_client,self.stress_df,self.hr_df,self.spo2_df,self.steps_df = warmup()
         self.run()    
         
     def run(self):
@@ -138,7 +159,7 @@ class App:
 
         functions = {
             'Home': pg.show_home,
-            'Dashboard':lambda: pg.show_dashboard(self.stress_df,self.hr_df,self.supabase_client),
+            'Dashboard':lambda: pg.show_dashboard(self.stress_df,self.hr_df,self.spo2_df,self.steps_df,self.supabase_client),
             'Activity':pg.show_activity,
             'Coach':pg.show_coach,
             'More':pg.show_more,

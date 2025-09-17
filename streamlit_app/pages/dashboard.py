@@ -43,57 +43,63 @@ def render_metric_tab(tab,metric_name,df,config,supabase_client=None):
 
         st.altair_chart(chart_daily,use_container_width=True)
 
-        # Huurly chart
-        col3, col4 = st.columns([4, 2])
-        col3.header(f"{config['hourly_icon']}  Hourly {config['title']} Chart")
-        time_filter = col4.time_input(
-            f"{metric_name}_Time",
-            key=f"{metric_name}_time_filter",
-            step=3600,
-            label_visibility="hidden"
-        )
+        if "jsonPath" in df_filtered.columns:            
+            # Huurly chart
+            col3, col4 = st.columns([4, 2])
+            col3.header(f"{config['hourly_icon']}  Hourly {config['title']} Chart")
+            time_filter = col4.time_input(
+                f"{metric_name}_Time",
+                key=f"{metric_name}_time_filter",
+                step=3600,
+                label_visibility="hidden"
+            )
 
-        jsonFilepath = None
-        df_bin = None
-        chartBin = pd.DataFrame()
+            jsonFilepath = None
+            df_bin = None
+            chartBin = pd.DataFrame()
 
-        if not df_filtered.empty and time_filter != datetime.time(0, 0):
-            match = df_filtered.loc[df_filtered[config["start_time"]].dt.time == time_filter]
-            if not match.empty:
-                jsonFilepath = match.iloc[0]['jsonPath']
-                # cache json
-                json_cache = st.session_state.setdefault("json_cache", {})
-                if jsonFilepath in json_cache:
-                    df_bin = json_cache[jsonFilepath]
+            if not df_filtered.empty and time_filter != datetime.time(0, 0):
+                match = df_filtered.loc[df_filtered[config["start_time"]].dt.time == time_filter]
+                if not match.empty:
+                    jsonFilepath = match.iloc[0]['jsonPath']
+                    # cache json
+                    json_cache = st.session_state.setdefault("json_cache", {})
+                    if jsonFilepath in json_cache:
+                        df_bin = json_cache[jsonFilepath]
+                    else:
+                        with st.spinner(f"Fetching {config['title']} details..."):
+                            df_bin = loadBinningjsons(df[config["time_offset"]], jsonFilepath, supabase_client)
+                            json_cache[jsonFilepath] = df_bin
+
+                    st.session_state[f"last_{metric_name}_bin_df"] = df_bin
+                    chartBin = chartBinningjsons(
+                        df_bin,
+                        "start_time",
+                        "Time",
+                        config["value_bin"],
+                        config["y_label"],
+                        config["min"],
+                        config["max"]
+                    )
                 else:
-                    with st.spinner(f"Fetching {config['title']} details..."):
-                        df_bin = loadBinningjsons(df[config["time_offset"]], jsonFilepath, supabase_client)
-                        json_cache[jsonFilepath] = df_bin
-
-                st.session_state[f"last_{metric_name}_bin_df"] = df_bin
-                chartBin = chartBinningjsons(
-                    df_bin,
-                    "start_time",
-                    "Time",
-                    config["value_bin"],
-                    config["y_label"],
-                    config["min"],
-                    config["max"]
-                )
+                    st.info("No Data found for the selected time.")
             else:
-                st.info("No Data found for the selected time.")
+                st.info("Please select a date & time")
+
+            # Session state save
+            if f"{metric_name}_chartBin" not in st.session_state:
+                st.session_state[f"{metric_name}_chartBin"] = pd.DataFrame()
+
+            st.session_state[f"{metric_name}_chartBin"] = chartBin
+            st.altair_chart(st.session_state[f"{metric_name}_chartBin"], use_container_width=True)
         else:
-            st.info("Please select a date & time")
+            st.info("No binning data available")
 
-        # Session state save
-        if f"{metric_name}_chartBin" not in st.session_state:
-            st.session_state[f"{metric_name}_chartBin"] = pd.DataFrame()
 
-        st.session_state[f"{metric_name}_chartBin"] = chartBin
-        st.altair_chart(st.session_state[f"{metric_name}_chartBin"], use_container_width=True)
+        
     
 ############ MAIN DASHBOARD #############
-def show_dashboard(df_stress,df_hr,supabase_client):
+def show_dashboard(df_stress,df_hr,df_spo2,df_steps,supabase_client):
     p1_tab1,p1_tab2,p1_tab3,p1_tab4,p1_tab5 = st.tabs(['Stress Graph','Heart-Rate Graph','SpO2 Graph','Steps Graph','Calorie Graph'])
 
     configs = {
@@ -121,24 +127,37 @@ def show_dashboard(df_stress,df_hr,supabase_client):
             "min": "heart_rate_min",
             "max": "heart_rate_max"
         },
-        # "spo2": {
-        #     "title": "SpO₂",
-        #     "daily_icon": "📆🩸",
-        #     "hourly_icon": "⌚🩸",
-        #     "start_time": "spo2_start_time",
-        #     "time_offset": "spo2_time_offset",
-        #     "value": "spo2_spo2",
-        #     "value_bin": "spo2",
-        #     "y_label": "SpO₂",
-        #     "min": "spo2_min",
-        #     "max": "spo2_max"
-        # },
+        "spo2": {
+            "title": "SpO₂",
+            "daily_icon": "📆🩸",
+            "hourly_icon": "⌚🩸",
+            "start_time": "oxygen_saturation_start_time",
+            "time_offset": "oxygen_saturation_time_offset",
+            "value": "oxygen_saturation_spo2",
+            "value_bin": "spo2",
+            "y_label": "SpO₂",
+            "min": "spo2_min",
+            "max": "spo2_max"
+        },
+        "steps":{
+            "title": "Steps",
+            "daily_icon": "📆👟",
+            "hourly_icon": "⌚👟",
+            "start_time": "step_count_start_time",
+            "time_offset": "step_count_time_offset",
+            "value": "step_count_count",
+            "value_bin": "steps",
+            "y_label": "Steps",
+            "min": "steps_min",
+            "max": "steps_max"
+        }
         # to add steps, calorie later with same structure
     }
 
     render_metric_tab(p1_tab1,"stress",df_stress,configs["stress"],supabase_client)
     render_metric_tab(p1_tab2,"hr",df_hr,configs["hr"],supabase_client)
-    # render_metric_tab(p1_tab3,"spo2",df_spo2,configs["spo2"],supabase_client)
+    render_metric_tab(p1_tab3,"spo2",df_spo2,configs["spo2"],supabase_client)
+    render_metric_tab(p1_tab4,"steps",df_steps,configs["steps"],supabase_client)
     # to add steps and cals
 
 
