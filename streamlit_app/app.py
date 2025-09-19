@@ -54,8 +54,15 @@ def get_spo2_df():
 @st.cache_data
 def get_steps_df():
     engine = get_engine()
-    df_steps = querySupabase(engine,"step_count_start_time","step_count_count","step_count_time_offset","tracker_pedometer_step_count")    
+    df_steps = querySupabase(engine,"step_count_start_time","step_count_count","step_count_time_offset","tracker_pedometer_step_count",binningjson="")    
     return df_steps
+
+@st.cache_data
+def get_calorie_df():
+    engine = get_engine()
+    df_calorie = querySupabase(engine,"calories_burned_update_time","calories_burned_active_calorie",offset="",xvar="tracker_heart_rate",binningjson="extra_data") 
+    df_calorie['jsonPath'] = "com.samsung.shealth.tracker.heart_rate/" + df_calorie['heart_rate_binning_data'].str[0] + "/" + df_calorie["heart_rate_binning_data"] 
+    return df_calorie 
 
 @st.cache_resource
 def get_engine():
