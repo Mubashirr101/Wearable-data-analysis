@@ -32,12 +32,13 @@ def render_metric_tab(tab,metric_name,df,config,supabase_client=None):
             df_filtered = df.iloc[0:0]
 
         chart_type_map = {
-            'hr':'line',
-            'stress':'line',
-            'spo2':'line',
-            'steps':'bar',
-            'calorie':'bar'
+            'hr': 'hr',
+            'stress': 'stress',
+            'spo2': 'spo2',
+            'steps': 'steps',
+            'calorie': 'calorie'
         }
+
         
         # Daily chart
         chart_daily = chartTimeData(
@@ -199,21 +200,65 @@ def chartTimeData(df,xval,yval,xtitle,ytitle,chart_title,chart_type="line"):
     ]
 
     # chart type
-    if chart_type == "line":
+    if chart_type == "hr":
+        base = alt.Chart(df).encode(
+            x=alt.X(xval, title=xtitle, scale=alt.Scale(domain=x_domain))
+        )
+        line = base.mark_line(point=True, color="red").encode(
+            y=alt.Y(yval, title=ytitle),
+            tooltip=[xval, yval]
+        )
+        band = None
+        if "heart_rate_min" in df.columns and "heart_rate_max" in df.columns:
+            band = base.mark_area(opacity=0.3, color="lightblue").encode(
+                y="heart_rate_min:Q",
+                y2="heart_rate_max:Q"
+            )
+        resting = None
+        if "heart_rate_custom" in df.columns and df["heart_rate_custom"].notna().any():
+            resting_val = df["heart_rate_custom"].iloc[0]
+            resting = base.mark_rule(color="green", strokeDash=[5, 5]).encode(
+                y=alt.Y(value=resting_val)
+            )
+        chart = line
+        if band is not None: chart = band + chart
+        if resting is not None: chart = chart + resting
+
+    elif chart_type == "stress":
+        chart = alt.Chart(df).mark_line(point=True, color="orange").encode(
+            alt.X(xval, title=xtitle, scale=alt.Scale(domain=x_domain)),
+            alt.Y(yval, title=ytitle),
+            tooltip=[xval, yval]
+        )
+
+    elif chart_type == "spo2":
+        chart = alt.Chart(df).mark_line(point=True, color="blue").encode(
+            alt.X(xval, title=xtitle, scale=alt.Scale(domain=x_domain)),
+            alt.Y(yval, title=ytitle),
+            tooltip=[xval, yval]
+        )
+
+    elif chart_type == "steps":
+        chart = alt.Chart(df).mark_bar(color="purple").encode(
+            alt.X(xval, title=xtitle, scale=alt.Scale(domain=x_domain)),
+            alt.Y(yval, title=ytitle),
+            tooltip=[xval, yval]
+        )
+
+    elif chart_type == "calorie":
+        chart = alt.Chart(df).mark_bar(color="brown").encode(
+            alt.X(xval, title=xtitle, scale=alt.Scale(domain=x_domain)),
+            alt.Y(yval, title=ytitle),
+            tooltip=[xval, yval]
+        )
+
+    else:  # fallback
         chart = alt.Chart(df).mark_line(point=True).encode(
             alt.X(xval, title=xtitle, scale=alt.Scale(domain=x_domain)),
-            alt.Y(yval, title=ytitle)
+            alt.Y(yval, title=ytitle),
+            tooltip=[xval, yval]
         )
-    elif chart_type == "bar":
-        chart = alt.Chart(df).mark_bar().encode(
-            alt.X(xval, title=xtitle, scale=alt.Scale(domain=x_domain)),
-            alt.Y(yval, title=ytitle)
-        )
-    else:  # default
-        chart = alt.Chart(df).mark_line(point=True).encode(
-            alt.X(xval, title=xtitle, scale=alt.Scale(domain=x_domain)),
-            alt.Y(yval, title=ytitle)
-        )
+
     return chart
 
 def apply_offset(row,offset_col,time_col):
