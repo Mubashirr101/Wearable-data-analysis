@@ -30,6 +30,14 @@ def render_metric_tab(tab,metric_name,df,config,supabase_client=None):
             st.session_state[f"df_{metric_name}_filtered"] = df_filtered
         else:
             df_filtered = df.iloc[0:0]
+
+        chart_type_map = {
+            'hr':'line',
+            'stress':'line',
+            'spo2':'line',
+            'steps':'bar',
+            'calorie':'bar'
+        }
         
         # Daily chart
         chart_daily = chartTimeData(
@@ -38,7 +46,8 @@ def render_metric_tab(tab,metric_name,df,config,supabase_client=None):
             config["value"],
             "Time/Date",
             config["y_label"],
-            f"{config['daily_icon']} {config['title']} over Time"
+            f"{config['daily_icon']} {config['title']} over Time",
+            chart_type=chart_type_map.get(metric_name,'line')
         )
 
         st.altair_chart(chart_daily,use_container_width=True)
@@ -161,18 +170,50 @@ def show_dashboard(df_stress,df_hr,df_spo2,df_steps,supabase_client):
     # to add steps and cals
 
 
-def chartTimeData(df,xval,yval,xtitle,ytitle,chart_title):
-    df[xval] = pd.to_datetime(df[xval])
+def chartTimeData(df,xval,yval,xtitle,ytitle,chart_title,chart_type="line"):
+
+    if df.empty:
+        df = pd.DataFrame({xval :[],yval:[]})
+
+    #date time conversion
+    df[xval] = pd.to_datetime(df[xval],errors ="coerce")
+    # detect offset colmn
     offset_col = None
     for col in df.columns:
         if "time_offset" in col:
             offset_col = col
             break
-    df[xval] = df.apply(lambda row: apply_offset(row,offset_col,xval),axis=1)
-    chart = alt.Chart(df).mark_bar().encode(
-        alt.X(xval).title(xtitle),
-        alt.Y(yval).title(ytitle)
-    )
+    if offset_col and not df.empty:
+        df[xval] = df.apply(lambda row: apply_offset(row,offset_col,xval),axis=1)
+    
+    # base date
+    if df[xval].notna().any():
+        base_date = df[xval].dt.date.min()
+    else:
+        base_date = datetime.date.today()
+
+    # force xaxis domain from 6:00 to 24
+    x_domain = [
+        datetime.datetime.combine(base_date, datetime.time(0,0)),
+        datetime.datetime.combine(base_date, datetime.time(23,59,59))
+    ]
+
+    # chart type
+    if chart_type == "line":
+        chart = alt.Chart(df).mark_line(point=True).encode(
+            alt.X(xval, title=xtitle, scale=alt.Scale(domain=x_domain)),
+            alt.Y(yval, title=ytitle)
+        )
+    elif chart_type == "bar":
+        chart = alt.Chart(df).mark_bar().encode(
+            alt.X(xval, title=xtitle, scale=alt.Scale(domain=x_domain)),
+            alt.Y(yval, title=ytitle)
+        )
+    else:  # default
+        chart = alt.Chart(df).mark_line(point=True).encode(
+            alt.X(xval, title=xtitle, scale=alt.Scale(domain=x_domain)),
+            alt.Y(yval, title=ytitle)
+        )
     return chart
 
 def apply_offset(row,offset_col,time_col):
