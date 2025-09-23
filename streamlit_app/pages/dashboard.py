@@ -32,7 +32,7 @@ def render_metric_tab(tab, metric_name, df, config, supabase_client=None):
             df_filtered = df[df[config["start_time"]].dt.date == pd.to_datetime(date_filter).date()].copy()
             st.session_state[f"df_{metric_name}_filtered"] = df_filtered
         else:
-            df_filtered = pd.DataFrame()
+            df_filtered = df.iloc[0:0]
 
         # ---------- Daily chart ----------
         chart_type_map = {
@@ -42,6 +42,8 @@ def render_metric_tab(tab, metric_name, df, config, supabase_client=None):
             'steps': 'steps',
             'calorie': 'calorie'
         }
+    
+
 
         chart_daily = chartTimeData(
             df_filtered,
@@ -92,8 +94,8 @@ def render_metric_tab(tab, metric_name, df, config, supabase_client=None):
                     # summary metrics
                     mcol1, mcol2, mcol3, mcol4 = st.columns(4)
                     mcol1.metric("Total steps (day)", int(daily[config["value"]].sum()))
-                    mcol2.metric("Avg steps (day)", int(daily[config["value"]].mean() if not daily.empty else 0))
-                    mcol3.metric("Max steps (day)", int(daily[config["value"]].max() if not daily.empty else 0))
+                    mcol2.metric("Total Calories Burnt (day)", int(daily[config["step_count_calorie"]].sum()))
+                    mcol3.metric("Avg speed (day)", int(daily[config["step_count_speed"]].mean()))
                     mcol4.metric("Total distance (m)", round(daily.get("step_count_distance", pd.Series([0])).sum(), 2))
 
                     # Row 1: stacked run/walk per day + rolling steps line
@@ -186,7 +188,8 @@ def render_metric_tab(tab, metric_name, df, config, supabase_client=None):
         # Skip hourly chart if adv chart is displayed
         if not (metric_name == "steps" and adv_chart_displayed):
             # Huurly chart
-            if "jsonPath" in df_filtered.columns:       
+            if "jsonPath" in df_filtered.columns:            
+                # Huurly chart
                 col3, col4 = st.columns([4, 2])
                 col3.header(f"{config['hourly_icon']}  Hourly {config['title']} Chart")
                 time_filter = col4.time_input(
@@ -200,8 +203,13 @@ def render_metric_tab(tab, metric_name, df, config, supabase_client=None):
                 df_bin = None
                 chartBin = pd.DataFrame()
 
+                
+
+
                 if not df_filtered.empty and time_filter != datetime.time(0, 0):
-                    match = df_filtered.loc[df_filtered[config["start_time"]].dt.time == time_filter]
+                    df_copy = df_filtered
+                    df_copy['start_time'] = df_copy.apply(lambda row: apply_offset(row, config['time_offset'], config['start_time']), axis=1)
+                    match = df_copy.loc[df_copy["start_time"].dt.time == time_filter]
                     if not match.empty:
                         jsonFilepath = match.iloc[0]['jsonPath']
                         # cache json
@@ -286,13 +294,19 @@ def show_dashboard(df_stress,df_hr,df_spo2,df_steps,supabase_client):
             "title": "Steps",
             "daily_icon": "📆👟",
             "summary_icon": "📊👟",
+            "hourly_icon": "⌚👟",
             "start_time": "step_count_start_time",
             "time_offset": "step_count_time_offset",
             "value": "step_count_count",
             "value_bin": "steps",
             "y_label": "Steps",
             "min": "steps_min",
-            "max": "steps_max"
+            "max": "steps_max",
+            "step_count_calorie":"step_count_calorie",
+            "step_count_speed":"step_count_speed",
+            "step_count_distance":"step_count_distance",
+            "run_step":"run_step",
+            "walk_step":"walk_step",
         }
         # to add steps, calorie later with same structure
     }
@@ -301,13 +315,14 @@ def show_dashboard(df_stress,df_hr,df_spo2,df_steps,supabase_client):
     render_metric_tab(p1_tab2,"hr",df_hr,configs["hr"],supabase_client)
     render_metric_tab(p1_tab3,"spo2",df_spo2,configs["spo2"],supabase_client)
     render_metric_tab(p1_tab4,"steps",df_steps,configs["steps"],supabase_client)
-    # to add steps and cals
 
 
-# ...existing code...
 def chartTimeData(df,xval,yval,xtitle,ytitle,chart_title,chart_type="line"):
     # defensive copy
     df = df.copy() if not df.empty else pd.DataFrame({xval: [], yval: []})
+
+    # add metric title column for tooltip
+    df["_metric_title"] = chart_title
 
     # datetime conversion
     df[xval] = pd.to_datetime(df[xval], errors="coerce")
@@ -362,6 +377,17 @@ def chartTimeData(df,xval,yval,xtitle,ytitle,chart_title,chart_type="line"):
         x=alt.X(xval, title=xtitle, scale=alt.Scale(domain=x_domain))
     )
 
+    # build shared tooltip: Metric title, time, value, optional min/max
+    tooltip_list = [
+        alt.Tooltip(xval, title="Time", type="temporal", format="%I:%M %p"),
+    ]
+    if yval in df.columns:
+        tooltip_list.append(alt.Tooltip(yval, title=ytitle, format=".2f"))
+    if min_col in df.columns:
+        tooltip_list.append(alt.Tooltip(min_col, title="Min", format=".2f"))
+    if max_col in df.columns:
+        tooltip_list.append(alt.Tooltip(max_col, title="Max", format=".2f"))
+
     nearest = alt.selection_point(on="mouseover", nearest=True, empty="none", fields=[xval])
 
     # choose visuals per chart_type
@@ -370,16 +396,17 @@ def chartTimeData(df,xval,yval,xtitle,ytitle,chart_title,chart_type="line"):
         if min_col and max_col:
             band = base.mark_area(opacity=0.2, color="#c6dbef").encode(
                 y=alt.Y(f"{min_col}:Q", title=ytitle, scale=alt.Scale(domain=y_domain)),
-                y2=alt.Y2(f"{max_col}:Q")
+                y2=alt.Y2(f"{max_col}:Q"),
+                tooltip=tooltip_list
             )
         line = base.mark_line(interpolate="monotone", strokeWidth=2.5, color="#d62728").encode(
             y=alt.Y(f"{yval}:Q", title=ytitle, scale=alt.Scale(domain=y_domain)),
-            tooltip=[alt.Tooltip(xval, title="Time", type="temporal", format="%I:%M %p"),
-                     alt.Tooltip(yval, title=ytitle, format=".1f")]
+            tooltip=tooltip_list
         )
         points = base.mark_circle(size=45, color="#d62728").encode(
             y=alt.Y(f"{yval}:Q"),
-            opacity=alt.condition(nearest, alt.value(1.0), alt.value(0.0))
+            opacity=alt.condition(nearest, alt.value(1.0), alt.value(0.0)),
+            tooltip=tooltip_list
         ).add_selection(nearest)
         chart = (band + line + points) if band is not None else (line + points)
         # optional resting line
@@ -395,27 +422,29 @@ def chartTimeData(df,xval,yval,xtitle,ytitle,chart_title,chart_type="line"):
         if f"{yval}_min" in df.columns and f"{yval}_max" in df.columns:
             band = base.mark_area(opacity=0.15, color="#fee6ce").encode(
                 y=alt.Y(f"{yval}_min:Q", scale=alt.Scale(domain=y_domain)),
-                y2=alt.Y2(f"{yval}_max:Q")
+                y2=alt.Y2(f"{yval}_max:Q"),
+                tooltip=tooltip_list
             )
         line = base.mark_line(interpolate="monotone", strokeWidth=2.2, color="#ff7f0e").encode(
             y=alt.Y(f"{yval}:Q", title=ytitle, scale=alt.Scale(domain=y_domain)),
-            tooltip=[alt.Tooltip(xval, title="Time", type="temporal", format="%I:%M %p"),
-                     alt.Tooltip(yval, title=ytitle)]
+            tooltip=tooltip_list
         )
         points = base.mark_circle(size=40, color="#ff7f0e").encode(
             y=alt.Y(f"{yval}:Q"),
-            opacity=alt.condition(nearest, alt.value(1.0), alt.value(0.0))
+            opacity=alt.condition(nearest, alt.value(1.0), alt.value(0.0)),
+            tooltip=tooltip_list
         ).add_selection(nearest)
         chart = (band + line + points) if band is not None else (line + points)
 
     elif chart_type == "spo2":
         line = base.mark_line(interpolate="monotone", strokeWidth=2.2, color="#1f77b4").encode(
             y=alt.Y(f"{yval}:Q", title=ytitle, scale=alt.Scale(domain=y_domain)),
-            tooltip=[alt.Tooltip(xval, title="Time", type="temporal", format="%I:%M %p"), alt.Tooltip(yval, title=ytitle)]
+            tooltip=tooltip_list
         )
         points = base.mark_circle(size=40, color="#1f77b4").encode(
             y=alt.Y(f"{yval}:Q"),
-            opacity=alt.condition(nearest, alt.value(1.0), alt.value(0.0))
+            opacity=alt.condition(nearest, alt.value(1.0), alt.value(0.0)),
+            tooltip=tooltip_list
         ).add_selection(nearest)
         chart = line + points
 
@@ -423,36 +452,26 @@ def chartTimeData(df,xval,yval,xtitle,ytitle,chart_title,chart_type="line"):
         # bars + rolling mean line
         bars = base.mark_bar(color="#6a51a3").encode(
             y=alt.Y(f"{yval}:Q", title=ytitle, scale=alt.Scale(domain=y_domain)),
-            tooltip=[alt.Tooltip(xval, title="Time", type="temporal", format="%I:%M %p"), alt.Tooltip(yval, title=ytitle)]
+            tooltip=tooltip_list
         )
-        # prepare rolling mean
-        if not df.empty and yval in df.columns:
-            df_roll = df[[xval, yval]].dropna().set_index(xval).resample("H").sum().reset_index()
-            df_roll["rolling_3h"] = df_roll[yval].rolling(3, min_periods=1).mean()
-            line = alt.Chart(df_roll).mark_line(color="#ff00ff", strokeWidth=2.2).encode(
-                x=alt.X(xval, title=xtitle, scale=alt.Scale(domain=x_domain)),
-                y=alt.Y("rolling_3h:Q", title="Rolling mean"),
-                tooltip=[alt.Tooltip(xval, title="Time", type="temporal", format="%I:%M %p"), alt.Tooltip("rolling_3h:Q", title="Rolling mean", format=".1f")]
-            )
-            chart = (bars + line).interactive()
-        else:
-            chart = bars
+        chart = bars.interactive()
 
     elif chart_type == "calorie":
         chart = base.mark_bar(color="#8c564b").encode(
             y=alt.Y(f"{yval}:Q", title=ytitle, scale=alt.Scale(domain=y_domain)),
-            tooltip=[alt.Tooltip(xval, title="Time", type="temporal", format="%I:%M %p"), alt.Tooltip(yval, title=ytitle)]
+            tooltip=tooltip_list
         )
 
     else:
         # fallback line
         line = base.mark_line(interpolate="monotone", strokeWidth=2).encode(
             y=alt.Y(f"{yval}:Q", title=ytitle, scale=alt.Scale(domain=y_domain)),
-            tooltip=[alt.Tooltip(xval, title="Time", type="temporal", format="%I:%M %p"), alt.Tooltip(yval, title=ytitle)]
+            tooltip=tooltip_list
         )
         points = base.mark_circle(size=40).encode(
             y=alt.Y(f"{yval}:Q"),
-            opacity=alt.condition(nearest, alt.value(1.0), alt.value(0.0))
+            opacity=alt.condition(nearest, alt.value(1.0), alt.value(0.0)),
+            tooltip=tooltip_list
         ).add_selection(nearest)
         chart = line + points
 
@@ -524,12 +543,24 @@ def chartBinningjsons(dfJson,xval,xtitle,yval,ytitle,yminval,ymaxval):
     # base encoding
     base = alt.Chart(dfJson).encode(
         x=alt.X(xval, title=xtitle, axis=alt.Axis(format="%I:%M %p")),
+        tooltip=[
+            alt.Tooltip(xval, title="Time", type="temporal", format="%I:%M %p"),
+            alt.Tooltip(yval, title=ytitle),
+            alt.Tooltip(yminval, title="Min"),
+            alt.Tooltip(ymaxval, title="Max"),
+        ]
     )
 
     # shaded min-max band
     band = base.mark_area(opacity=0.18, color="#9ecae1").encode(
-        y=alt.Y(f"{yminval}:Q", title=ytitle, scale=alt.Scale(domain=y_domain)),
-        y2=alt.Y2(f"{ymaxval}:Q")
+        y=alt.Y(yminval, title=ytitle, scale=alt.Scale(domain=y_domain)),
+        y2=alt.Y2(ymaxval),
+        tooltip=[
+            alt.Tooltip(xval, title="Time", type="temporal", format="%I:%M %p"),
+            alt.Tooltip(yval, title=ytitle),
+            alt.Tooltip(yminval, title="Min"),
+            alt.Tooltip(ymaxval, title="Max"),
+        ]
     )
 
     # smooth main line
@@ -537,9 +568,9 @@ def chartBinningjsons(dfJson,xval,xtitle,yval,ytitle,yminval,ymaxval):
         y=alt.Y(f"{yval}:Q", title=ytitle, scale=alt.Scale(domain=y_domain)),
         tooltip=[
             alt.Tooltip(xval, title="Time", type="temporal", format="%I:%M %p"),
-            alt.Tooltip(yval, title=ytitle, format=".2f"),
-            alt.Tooltip(yminval, title="Min", format=".2f"),
-            alt.Tooltip(ymaxval, title="Max", format=".2f"),
+            alt.Tooltip(yval, title=ytitle),
+            alt.Tooltip(yminval, title="Min"),
+            alt.Tooltip(ymaxval, title="Max"),
         ]
     )
 
