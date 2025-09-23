@@ -13,15 +13,18 @@ for k in session.keys():
     session[k] = session[k]
 
 
-def render_metric_tab(tab,metric_name,df,config,supabase_client=None):
+def render_metric_tab(tab, metric_name, df, config, supabase_client=None):
+    ## Renders the metric tab including daily and hourly charts.
+    ## For 'steps', also renders summary chart from steps_summary.source_info JSON.
+    ## Skips hourly chart for steps if summary is displayed.    
     with tab:
-        col1,col2 = st.columns([4,2])
-        col1.header(f"{config['daily_icon']} Daily {config['title']} Chart")
+        col1, col2 = st.columns([4, 2])
+        col1.header(f"{config.get('daily_icon','📆')} Daily {config['title']} Chart")
 
-        #date inpt
+        # ---------- Date filter ----------
         date_filter = col2.date_input(
             f'{metric_name}_Date',
-            key = f"{metric_name}_date_filter",
+            key=f"{metric_name}_date_filter",
             label_visibility="hidden"
         )
 
@@ -29,8 +32,9 @@ def render_metric_tab(tab,metric_name,df,config,supabase_client=None):
             df_filtered = df[df[config["start_time"]].dt.date == pd.to_datetime(date_filter).date()].copy()
             st.session_state[f"df_{metric_name}_filtered"] = df_filtered
         else:
-            df_filtered = df.iloc[0:0]
+            df_filtered = pd.DataFrame()
 
+        # ---------- Daily chart ----------
         chart_type_map = {
             'hr': 'hr',
             'stress': 'stress',
@@ -39,71 +43,200 @@ def render_metric_tab(tab,metric_name,df,config,supabase_client=None):
             'calorie': 'calorie'
         }
 
-        
-        # Daily chart
         chart_daily = chartTimeData(
             df_filtered,
             config["start_time"],
             config["value"],
             "Time/Date",
             config["y_label"],
-            f"{config['daily_icon']} {config['title']} over Time",
-            chart_type=chart_type_map.get(metric_name,'line')
+            f"{config.get('daily_icon','📆')} {config['title']} over Time",
+            chart_type=chart_type_map.get(metric_name, 'line')
         )
+        st.altair_chart(chart_daily, use_container_width=True)
 
-        st.altair_chart(chart_daily,use_container_width=True)
-
-        if "jsonPath" in df_filtered.columns:            
-            # Huurly chart
-            col3, col4 = st.columns([4, 2])
-            col3.header(f"{config['hourly_icon']}  Hourly {config['title']} Chart")
-            time_filter = col4.time_input(
-                f"{metric_name}_Time",
-                key=f"{metric_name}_time_filter",
-                step=3600,
-                label_visibility="hidden"
-            )
-
-            jsonFilepath = None
-            df_bin = None
-            chartBin = pd.DataFrame()
-
-            if not df_filtered.empty and time_filter != datetime.time(0, 0):
-                match = df_filtered.loc[df_filtered[config["start_time"]].dt.time == time_filter]
-                if not match.empty:
-                    jsonFilepath = match.iloc[0]['jsonPath']
-                    # cache json
-                    json_cache = st.session_state.setdefault("json_cache", {})
-                    if jsonFilepath in json_cache:
-                        df_bin = json_cache[jsonFilepath]
-                    else:
-                        with st.spinner(f"Fetching {config['title']} details..."):
-                            df_bin = loadBinningjsons(df[config["time_offset"]], jsonFilepath, supabase_client)
-                            json_cache[jsonFilepath] = df_bin
-
-                    st.session_state[f"last_{metric_name}_bin_df"] = df_bin
-                    chartBin = chartBinningjsons(
-                        df_bin,
-                        "start_time",
-                        "Time",
-                        config["value_bin"],
-                        config["y_label"],
-                        config["min"],
-                        config["max"]
-                    )
-                else:
-                    st.info("No Data found for the selected time.")
+        # ----------  Adv Chart ----------
+        adv_chart_displayed = False
+        if metric_name == "steps":
+            # advanced visualizations for steps dataframe
+            if df_filtered.empty:
+                st.info("No step data for selected date to show advanced charts.")
             else:
-                st.info("Please select a date & time")
+                adv_chart_displayed = True
+                df_steps = df_filtered.copy()
+                # ensure datetime
+                df_steps[config["start_time"]] = pd.to_datetime(df_steps[config["start_time"]], errors="coerce")
+                df_steps = df_steps.sort_values(config["start_time"])
+                # daily aggregates (resample by day)
+                try:
+                    daily = df_steps.set_index(config["start_time"]).resample("D").agg({
+                        config["value"]: "sum",
+                        "run_step": "sum" if "run_step" in df_steps.columns else "mean",
+                        "walk_step": "sum" if "walk_step" in df_steps.columns else "mean",
+                        "step_count_speed": "mean" if "step_count_speed" in df_steps.columns else "mean",
+                        "step_count_distance": "sum" if "step_count_distance" in df_steps.columns else "sum",
+                        "step_count_calorie": "sum" if "step_count_calorie" in df_steps.columns else "sum",
+                    }).reset_index()
+                except Exception:
+                    # fallback simple groupby day
+                    df_steps["day"] = df_steps[config["start_time"]].dt.date
+                    daily = df_steps.groupby("day").agg({
+                        config["value"]: "sum",
+                        "run_step": "sum" if "run_step" in df_steps.columns else "mean",
+                        "walk_step": "sum" if "walk_step" in df_steps.columns else "mean",
+                        "step_count_speed": "mean" if "step_count_speed" in df_steps.columns else "mean",
+                        "step_count_distance": "sum" if "step_count_distance" in df_steps.columns else "sum",
+                        "step_count_calorie": "sum" if "step_count_calorie" in df_steps.columns else "sum",
+                    }).reset_index().rename(columns={"day": config["start_time"]})
 
-            # Session state save
-            if f"{metric_name}_chartBin" not in st.session_state:
-                st.session_state[f"{metric_name}_chartBin"] = pd.DataFrame()
+                with st.expander("Advanced charts — detailed steps features", expanded=True):
+                    # summary metrics
+                    mcol1, mcol2, mcol3, mcol4 = st.columns(4)
+                    mcol1.metric("Total steps (day)", int(daily[config["value"]].sum()))
+                    mcol2.metric("Avg steps (day)", int(daily[config["value"]].mean() if not daily.empty else 0))
+                    mcol3.metric("Max steps (day)", int(daily[config["value"]].max() if not daily.empty else 0))
+                    mcol4.metric("Total distance (m)", round(daily.get("step_count_distance", pd.Series([0])).sum(), 2))
 
-            st.session_state[f"{metric_name}_chartBin"] = chartBin
-            st.altair_chart(st.session_state[f"{metric_name}_chartBin"], use_container_width=True)
-        else:
-            st.info("No binning data available")
+                    # Row 1: stacked run/walk per day + rolling steps line
+                    r1c1, r1c2 = st.columns([2,3])
+                    # stacked run/walk
+                    if {"run_step","walk_step"}.issubset(df_steps.columns):
+                        # fold in pandas so Altair has concrete dtypes
+                        folded = daily[[config["start_time"], "run_step", "walk_step"]].melt(
+                            id_vars=[config["start_time"]],
+                            value_vars=["run_step", "walk_step"],
+                            var_name="type",
+                            value_name="count"
+                        ).dropna(subset=["count"])
+                        folded["type"] = folded["type"].astype(str)
+                        folded["count"] = pd.to_numeric(folded["count"], errors="coerce").fillna(0)
+
+                        stacked = alt.Chart(folded).mark_bar().encode(
+                            x=alt.X(config["start_time"], title="Date", axis=alt.Axis(format="%Y-%m-%d")),
+                            y=alt.Y("count:Q", title="Count"),
+                            color=alt.Color("type:N"),
+                            tooltip=[config["start_time"], alt.Tooltip("type:N"), alt.Tooltip("count:Q")]
+                        ).properties(title="Run vs Walk counts per day")
+                        r1c1.altair_chart(stacked, use_container_width=True)
+                    else:
+                        r1c1.info("run_step / walk_step not available in this dataset")
+
+                    # steps with rolling mean
+                    df_steps_time = df_steps[[config["start_time"], config["value"]]].dropna().copy()
+                    if not df_steps_time.empty:
+                        df_steps_time = df_steps_time.set_index(config["start_time"]).resample("h").sum().reset_index()
+                        df_steps_time["rolling_3h"] = df_steps_time[config["value"]].rolling(3, min_periods=1).mean()
+                        steps_line = alt.Chart(df_steps_time).encode(
+                            x=alt.X(config["start_time"], title="Time"),
+                        )
+                        line = steps_line.mark_line(color="purple").encode(
+                            y=alt.Y(config["value"], title="Steps"),
+                            tooltip=[config["start_time"], config["value"]]
+                        )
+                        rolling = steps_line.mark_line(strokeDash=[4,4], color="black").encode(
+                            y=alt.Y("rolling_3h:Q", title="Rolling mean")
+                        )
+                        r1c2.altair_chart((line + rolling).properties(title="Steps over time (hourly) with rolling mean"), use_container_width=True)
+                    else:
+                        r1c2.info("Not enough time series data for rolling chart.")
+
+                    # Row 2: scatter speed vs distance and histogram of steps
+                    r2c1, r2c2 = st.columns(2)
+                    if {"step_count_speed","step_count_distance"}.issubset(df_steps.columns):
+                        scatter = alt.Chart(df_steps.dropna(subset=["step_count_speed","step_count_distance"])).mark_circle(size=60).encode(
+                            x=alt.X("step_count_speed:Q", title="Speed"),
+                            y=alt.Y("step_count_distance:Q", title="Distance"),
+                            color=alt.Color("run_step:N", title="Run vs Walk") if "run_step" in df_steps.columns else alt.value("steelblue"),
+                            tooltip=[config["start_time"], "step_count_speed", "step_count_distance", config["value"]]
+                        ).interactive().properties(title="Speed vs Distance (points colored by run_step if available)")
+                        r2c1.altair_chart(scatter, use_container_width=True)
+                    else:
+                        r2c1.info("Speed/distance data not available.")
+
+                    # histogram of step counts
+                    hist = alt.Chart(df_steps.dropna(subset=[config["value"]])).mark_bar().encode(
+                        x=alt.X(f"{config['value']}:Q", bin=alt.Bin(maxbins=40), title="Step count"),
+                        y=alt.Y("count()", title="Frequency"),
+                        tooltip=[alt.Tooltip(f"{config['value']}:Q")]
+                    ).properties(title="Distribution of step_count_count")
+                    r2c2.altair_chart(hist, use_container_width=True)
+
+                    # Row 3: boxplot calories and scatter steps vs calories
+                    r3c1, r3c2 = st.columns(2)
+                    if "step_count_calorie" in df_steps.columns:
+                        box = alt.Chart(df_steps.dropna(subset=["step_count_calorie"])).mark_boxplot().encode(
+                            x=alt.X("step_count_calorie:Q", title="Calories"),
+                            tooltip=["step_count_calorie"]
+                        ).properties(title="Calories distribution")
+                        r3c1.altair_chart(box, use_container_width=True)
+                    else:
+                        r3c1.info("Calories not available.")
+
+                    if config["value"] in df_steps.columns and "step_count_calorie" in df_steps.columns:
+                        scatter2 = alt.Chart(df_steps.dropna(subset=[config["value"], "step_count_calorie"])).mark_circle().encode(
+                            x=alt.X(config["value"], title="Steps"),
+                            y=alt.Y("step_count_calorie", title="Calories"),
+                            tooltip=[config["start_time"], config["value"], "step_count_calorie"]
+                        ).properties(title="Steps vs Calories")
+                        r3c2.altair_chart(scatter2, use_container_width=True)
+                    else:
+                        r3c2.info("Cannot plot Steps vs Calories (missing columns).")
+            
+
+        # ---------- Hourly / binning chart ----------
+        # Skip hourly chart if adv chart is displayed
+        if not (metric_name == "steps" and adv_chart_displayed):
+            # Huurly chart
+            if "jsonPath" in df_filtered.columns:       
+                col3, col4 = st.columns([4, 2])
+                col3.header(f"{config['hourly_icon']}  Hourly {config['title']} Chart")
+                time_filter = col4.time_input(
+                    f"{metric_name}_Time",
+                    key=f"{metric_name}_time_filter",
+                    step=3600,
+                    label_visibility="hidden"
+                )
+
+                jsonFilepath = None
+                df_bin = None
+                chartBin = pd.DataFrame()
+
+                if not df_filtered.empty and time_filter != datetime.time(0, 0):
+                    match = df_filtered.loc[df_filtered[config["start_time"]].dt.time == time_filter]
+                    if not match.empty:
+                        jsonFilepath = match.iloc[0]['jsonPath']
+                        # cache json
+                        json_cache = st.session_state.setdefault("json_cache", {})
+                        if jsonFilepath in json_cache:
+                            df_bin = json_cache[jsonFilepath]
+                        else:
+                            with st.spinner(f"Fetching {config['title']} details..."):
+                                df_bin = loadBinningjsons(df[config["time_offset"]], jsonFilepath, supabase_client)
+                                json_cache[jsonFilepath] = df_bin
+
+                        st.session_state[f"last_{metric_name}_bin_df"] = df_bin
+                        chartBin = chartBinningjsons(
+                            df_bin,
+                            "start_time",
+                            "Time",
+                            config["value_bin"],
+                            config["y_label"],
+                            config["min"],
+                            config["max"]
+                        )
+                    else:
+                        st.info("No Data found for the selected time.")
+                else:
+                    st.info("Please select a date & time")
+
+                # Session state save
+                if f"{metric_name}_chartBin" not in st.session_state:
+                    st.session_state[f"{metric_name}_chartBin"] = pd.DataFrame()
+
+                st.session_state[f"{metric_name}_chartBin"] = chartBin
+                st.altair_chart(st.session_state[f"{metric_name}_chartBin"], use_container_width=True)
+            else:
+                st.info("No binning data available")
+
 
 
         
@@ -152,7 +285,7 @@ def show_dashboard(df_stress,df_hr,df_spo2,df_steps,supabase_client):
         "steps":{
             "title": "Steps",
             "daily_icon": "📆👟",
-            "hourly_icon": "⌚👟",
+            "summary_icon": "📊👟",
             "start_time": "step_count_start_time",
             "time_offset": "step_count_time_offset",
             "value": "step_count_count",
@@ -171,93 +304,171 @@ def show_dashboard(df_stress,df_hr,df_spo2,df_steps,supabase_client):
     # to add steps and cals
 
 
+# ...existing code...
 def chartTimeData(df,xval,yval,xtitle,ytitle,chart_title,chart_type="line"):
+    # defensive copy
+    df = df.copy() if not df.empty else pd.DataFrame({xval: [], yval: []})
 
-    if df.empty:
-        df = pd.DataFrame({xval :[],yval:[]})
+    # datetime conversion
+    df[xval] = pd.to_datetime(df[xval], errors="coerce")
 
-    #date time conversion
-    df[xval] = pd.to_datetime(df[xval],errors ="coerce")
-    # detect offset colmn
+    # apply offset if present
     offset_col = None
     for col in df.columns:
         if "time_offset" in col:
             offset_col = col
             break
     if offset_col and not df.empty:
-        df[xval] = df.apply(lambda row: apply_offset(row,offset_col,xval),axis=1)
-    
-    # base date
+        df[xval] = df.apply(lambda row: apply_offset(row, offset_col, xval), axis=1)
+
+    # base_date and forced x-domain for single-day view
     if df[xval].notna().any():
         base_date = df[xval].dt.date.min()
     else:
         base_date = datetime.date.today()
-
-    # force xaxis domain from 6:00 to 24
     x_domain = [
-        datetime.datetime.combine(base_date, datetime.time(0,0)),
-        datetime.datetime.combine(base_date, datetime.time(23,59,59))
+        datetime.datetime.combine(base_date, datetime.time(0, 0)),
+        datetime.datetime.combine(base_date, datetime.time(23, 59, 59))
     ]
 
-    # chart type
+    # compute y-domain with optional min/max columns (e.g. heart_rate_min/heart_rate_max)
+    ymin, ymax = None, None
+    # try explicit min/max columns
+    min_col = None
+    max_col = None
+    for c in df.columns:
+        if c.endswith("_min") and c.startswith(yval.split("_")[0]):
+            min_col = c
+        if c.endswith("_max") and c.startswith(yval.split("_")[0]):
+            max_col = c
+    try:
+        if min_col and max_col:
+            ymin = float(df[min_col].min())
+            ymax = float(df[max_col].max())
+        else:
+            ymin = float(df[yval].min()) if yval in df.columns and not df[yval].dropna().empty else None
+            ymax = float(df[yval].max()) if yval in df.columns and not df[yval].dropna().empty else None
+    except Exception:
+        ymin, ymax = None, None
+
+    if ymin is None or ymax is None or ymax == ymin:
+        ymin = df[yval].min() if yval in df.columns and not df[yval].dropna().empty else 0
+        ymax = df[yval].max() if yval in df.columns and not df[yval].dropna().empty else 1
+
+    pad = (ymax - ymin) * 0.08 if (ymax - ymin) != 0 else max(abs(ymax), 1) * 0.1
+    y_domain = [ymin - pad, ymax + pad]
+
+    base = alt.Chart(df).encode(
+        x=alt.X(xval, title=xtitle, scale=alt.Scale(domain=x_domain))
+    )
+
+    nearest = alt.selection_point(on="mouseover", nearest=True, empty="none", fields=[xval])
+
+    # choose visuals per chart_type
     if chart_type == "hr":
-        base = alt.Chart(df).encode(
-            x=alt.X(xval, title=xtitle, scale=alt.Scale(domain=x_domain))
-        )
-        line = base.mark_line(point=True, color="red").encode(
-            y=alt.Y(yval, title=ytitle),
-            tooltip=[xval, yval]
-        )
         band = None
-        if "heart_rate_min" in df.columns and "heart_rate_max" in df.columns:
-            band = base.mark_area(opacity=0.3, color="lightblue").encode(
-                y="heart_rate_min:Q",
-                y2="heart_rate_max:Q"
+        if min_col and max_col:
+            band = base.mark_area(opacity=0.2, color="#c6dbef").encode(
+                y=alt.Y(f"{min_col}:Q", title=ytitle, scale=alt.Scale(domain=y_domain)),
+                y2=alt.Y2(f"{max_col}:Q")
             )
-        resting = None
+        line = base.mark_line(interpolate="monotone", strokeWidth=2.5, color="#d62728").encode(
+            y=alt.Y(f"{yval}:Q", title=ytitle, scale=alt.Scale(domain=y_domain)),
+            tooltip=[alt.Tooltip(xval, title="Time", type="temporal", format="%I:%M %p"),
+                     alt.Tooltip(yval, title=ytitle, format=".1f")]
+        )
+        points = base.mark_circle(size=45, color="#d62728").encode(
+            y=alt.Y(f"{yval}:Q"),
+            opacity=alt.condition(nearest, alt.value(1.0), alt.value(0.0))
+        ).add_selection(nearest)
+        chart = (band + line + points) if band is not None else (line + points)
+        # optional resting line
         if "heart_rate_custom" in df.columns and df["heart_rate_custom"].notna().any():
             resting_val = df["heart_rate_custom"].iloc[0]
-            resting = base.mark_rule(color="green", strokeDash=[5, 5]).encode(
+            resting = alt.Chart(pd.DataFrame({})).mark_rule(color="green", strokeDash=[4,4]).encode(
                 y=alt.Y(value=resting_val)
             )
-        chart = line
-        if band is not None: chart = band + chart
-        if resting is not None: chart = chart + resting
+            chart = chart + resting
 
     elif chart_type == "stress":
-        chart = alt.Chart(df).mark_line(point=True, color="orange").encode(
-            alt.X(xval, title=xtitle, scale=alt.Scale(domain=x_domain)),
-            alt.Y(yval, title=ytitle),
-            tooltip=[xval, yval]
+        band = None
+        if f"{yval}_min" in df.columns and f"{yval}_max" in df.columns:
+            band = base.mark_area(opacity=0.15, color="#fee6ce").encode(
+                y=alt.Y(f"{yval}_min:Q", scale=alt.Scale(domain=y_domain)),
+                y2=alt.Y2(f"{yval}_max:Q")
+            )
+        line = base.mark_line(interpolate="monotone", strokeWidth=2.2, color="#ff7f0e").encode(
+            y=alt.Y(f"{yval}:Q", title=ytitle, scale=alt.Scale(domain=y_domain)),
+            tooltip=[alt.Tooltip(xval, title="Time", type="temporal", format="%I:%M %p"),
+                     alt.Tooltip(yval, title=ytitle)]
         )
+        points = base.mark_circle(size=40, color="#ff7f0e").encode(
+            y=alt.Y(f"{yval}:Q"),
+            opacity=alt.condition(nearest, alt.value(1.0), alt.value(0.0))
+        ).add_selection(nearest)
+        chart = (band + line + points) if band is not None else (line + points)
 
     elif chart_type == "spo2":
-        chart = alt.Chart(df).mark_line(point=True, color="blue").encode(
-            alt.X(xval, title=xtitle, scale=alt.Scale(domain=x_domain)),
-            alt.Y(yval, title=ytitle),
-            tooltip=[xval, yval]
+        line = base.mark_line(interpolate="monotone", strokeWidth=2.2, color="#1f77b4").encode(
+            y=alt.Y(f"{yval}:Q", title=ytitle, scale=alt.Scale(domain=y_domain)),
+            tooltip=[alt.Tooltip(xval, title="Time", type="temporal", format="%I:%M %p"), alt.Tooltip(yval, title=ytitle)]
         )
+        points = base.mark_circle(size=40, color="#1f77b4").encode(
+            y=alt.Y(f"{yval}:Q"),
+            opacity=alt.condition(nearest, alt.value(1.0), alt.value(0.0))
+        ).add_selection(nearest)
+        chart = line + points
 
     elif chart_type == "steps":
-        chart = alt.Chart(df).mark_bar(color="purple").encode(
-            alt.X(xval, title=xtitle, scale=alt.Scale(domain=x_domain)),
-            alt.Y(yval, title=ytitle),
-            tooltip=[xval, yval]
+        # bars + rolling mean line
+        bars = base.mark_bar(color="#6a51a3").encode(
+            y=alt.Y(f"{yval}:Q", title=ytitle, scale=alt.Scale(domain=y_domain)),
+            tooltip=[alt.Tooltip(xval, title="Time", type="temporal", format="%I:%M %p"), alt.Tooltip(yval, title=ytitle)]
         )
+        # prepare rolling mean
+        if not df.empty and yval in df.columns:
+            df_roll = df[[xval, yval]].dropna().set_index(xval).resample("H").sum().reset_index()
+            df_roll["rolling_3h"] = df_roll[yval].rolling(3, min_periods=1).mean()
+            line = alt.Chart(df_roll).mark_line(color="#ff00ff", strokeWidth=2.2).encode(
+                x=alt.X(xval, title=xtitle, scale=alt.Scale(domain=x_domain)),
+                y=alt.Y("rolling_3h:Q", title="Rolling mean"),
+                tooltip=[alt.Tooltip(xval, title="Time", type="temporal", format="%I:%M %p"), alt.Tooltip("rolling_3h:Q", title="Rolling mean", format=".1f")]
+            )
+            chart = (bars + line).interactive()
+        else:
+            chart = bars
 
     elif chart_type == "calorie":
-        chart = alt.Chart(df).mark_bar(color="brown").encode(
-            alt.X(xval, title=xtitle, scale=alt.Scale(domain=x_domain)),
-            alt.Y(yval, title=ytitle),
-            tooltip=[xval, yval]
+        chart = base.mark_bar(color="#8c564b").encode(
+            y=alt.Y(f"{yval}:Q", title=ytitle, scale=alt.Scale(domain=y_domain)),
+            tooltip=[alt.Tooltip(xval, title="Time", type="temporal", format="%I:%M %p"), alt.Tooltip(yval, title=ytitle)]
         )
 
-    else:  # fallback
-        chart = alt.Chart(df).mark_line(point=True).encode(
-            alt.X(xval, title=xtitle, scale=alt.Scale(domain=x_domain)),
-            alt.Y(yval, title=ytitle),
-            tooltip=[xval, yval]
+    else:
+        # fallback line
+        line = base.mark_line(interpolate="monotone", strokeWidth=2).encode(
+            y=alt.Y(f"{yval}:Q", title=ytitle, scale=alt.Scale(domain=y_domain)),
+            tooltip=[alt.Tooltip(xval, title="Time", type="temporal", format="%I:%M %p"), alt.Tooltip(yval, title=ytitle)]
         )
+        points = base.mark_circle(size=40).encode(
+            y=alt.Y(f"{yval}:Q"),
+            opacity=alt.condition(nearest, alt.value(1.0), alt.value(0.0))
+        ).add_selection(nearest)
+        chart = line + points
+
+    # add median rule for visual cue (if yval present)
+    if yval in df.columns and not df[yval].dropna().empty:
+        median_rule = alt.Chart(df).transform_aggregate(
+            median_value=f"median({yval})"
+        ).mark_rule(color="gray", strokeDash=[4,4]).encode(
+            y=alt.Y("median_value:Q"),
+            tooltip=[alt.Tooltip("median_value:Q", title="Median", format=".2f")]
+        )
+        chart = chart + median_rule
+
+    chart = chart.properties(title=chart_title, width="container", height=320).configure_axis(
+        labelFontSize=11, titleFontSize=12
+    ).configure_title(fontSize=14, anchor="start").interactive()
 
     return chart
 
@@ -292,23 +503,71 @@ def loadBinningjsons(offset_col,jsonfilepath,supabase):
     dfjson = dfjson.sort_values("start_time")
     return dfjson
 
+
 def chartBinningjsons(dfJson,xval,xtitle,yval,ytitle,yminval,ymaxval):
-    ### viz
-    # base line (score)
-    line = alt.Chart(dfJson).mark_line(point=True).encode(
-        x=alt.X(f"{xval}:T",title = xtitle),
-        y=alt.Y(f"{yval}:Q",title = ytitle),
-        tooltip = [xval,yval,yminval,ymaxval]
+    ### improved viz: smooth line, shaded band, hover tooltips, median rule, adaptive y-domain
+    # compute y-domain safely
+    try:
+        ymin = float(dfJson[yminval].min()) if yminval in dfJson.columns else float(dfJson[yval].min())
+        ymax = float(dfJson[ymaxval].max()) if ymaxval in dfJson.columns else float(dfJson[yval].max())
+    except Exception:
+        ymin, ymax = None, None
+
+    if ymin is None or ymax is None or ymax == ymin:
+        # fallback
+        ymin = dfJson[yval].min() if yval in dfJson.columns else 0
+        ymax = dfJson[yval].max() if yval in dfJson.columns else 1
+
+    pad = (ymax - ymin) * 0.08 if (ymax - ymin) != 0 else max(abs(ymax),1) * 0.1
+    y_domain = [ymin - pad, ymax + pad]
+
+    # base encoding
+    base = alt.Chart(dfJson).encode(
+        x=alt.X(xval, title=xtitle, axis=alt.Axis(format="%I:%M %p")),
     )
-    # shaded minmax region
-    band = alt.Chart(dfJson).mark_area(opacity=0.3).encode(
-        x=f"{xval}:T",
-        y=f"{yminval}:Q",
-        y2=f"{ymaxval}:Q"
+
+    # shaded min-max band
+    band = base.mark_area(opacity=0.18, color="#9ecae1").encode(
+        y=alt.Y(f"{yminval}:Q", title=ytitle, scale=alt.Scale(domain=y_domain)),
+        y2=alt.Y2(f"{ymaxval}:Q")
     )
-    #combining
-    chartBin = (band + line).properties(
-        width = 700,
-        height = 400,
+
+    # smooth main line
+    line = base.mark_line(interpolate="monotone", strokeWidth=2.5, color="#6a51a3").encode(
+        y=alt.Y(f"{yval}:Q", title=ytitle, scale=alt.Scale(domain=y_domain)),
+        tooltip=[
+            alt.Tooltip(xval, title="Time", type="temporal", format="%I:%M %p"),
+            alt.Tooltip(yval, title=ytitle, format=".2f"),
+            alt.Tooltip(yminval, title="Min", format=".2f"),
+            alt.Tooltip(ymaxval, title="Max", format=".2f"),
+        ]
     )
+
+    # hover selection and highlight points
+    nearest = alt.selection_point(on="mouseover", nearest=True, empty="none", fields=[xval])
+    points = base.mark_circle(size=70, color="#6a51a3").encode(
+        y=alt.Y(f"{yval}:Q"),
+        opacity=alt.condition(nearest, alt.value(1.0), alt.value(0.0))
+    ).add_selection(nearest)
+
+    # median rule
+    median_rule = alt.Chart(dfJson).transform_aggregate(
+        median_value=f"median({yval})"
+    ).mark_rule(color="gray", strokeDash=[4,4]).encode(
+        y=alt.Y("median_value:Q"),
+        tooltip=[alt.Tooltip("median_value:Q", title="Median", format=".2f")]
+    )
+
+    chartBin = (band + line + points + median_rule).properties(
+        width="container",
+        height=360,
+        title=xtitle + " — " + ytitle
+    ).configure_axis(
+        labelFontSize=11,
+        titleFontSize=12
+    ).configure_title(
+        fontSize=14,
+        anchor="start"
+    ).interactive()  # enable pan/zoom
+
     return chartBin

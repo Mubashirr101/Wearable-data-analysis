@@ -50,7 +50,7 @@ def querySupabase(_engine, table: str, columns: list, retries=3):
 METRICS_CONFIG = {
     "stress": {
         "table": "stress",
-        "columns": ["start_time", "score", "time_offset", "binning_data"],
+        "columns": ["start_time", "score","min","max", "time_offset", "binning_data"],
         "jsonPath_template": "com.samsung.shealth.stress/{0}/{1}",
     },
     "hr": {
@@ -60,12 +60,12 @@ METRICS_CONFIG = {
     },
     "spo2": {
         "table": "tracker_oxygen_saturation",
-        "columns": ["oxygen_saturation_start_time", "oxygen_saturation_spo2", "oxygen_saturation_time_offset", "oxygen_saturation_binning"],
+        "columns": ["oxygen_saturation_start_time", "oxygen_saturation_spo2","oxygen_saturation_heart_rate", "oxygen_saturation_time_offset", "oxygen_saturation_binning"],
         "jsonPath_template": "com.samsung.shealth.tracker.oxygen_saturation/{0}/{1}",
     },
     "steps": {
         "table": "tracker_pedometer_step_count",
-        "columns": ["step_count_start_time", "step_count_count", "step_count_time_offset"],
+        "columns": ["step_count_start_time", "step_count_count","run_step","walk_step","step_count_speed","step_count_distance","step_count_calorie", "step_count_time_offset"],
         "jsonPath_template": "",
     },
     # "calorie": {
