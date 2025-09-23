@@ -68,11 +68,11 @@ METRICS_CONFIG = {
         "columns": ["step_count_start_time", "step_count_count","run_step","walk_step","step_count_speed","step_count_distance","step_count_calorie", "step_count_time_offset"],
         "jsonPath_template": "",
     },
-    # "calorie": {
-    #     "table": "tracker_calories",
-    #     "columns": ["calories_burned_update_time", "calories_burned_active_calorie", "extra_data"],
-    #     "jsonPath_template": "",
-    # },
+    "calorie": {
+        "table": "calories_burned_details",
+        "columns": ["calories_burned_day_time","calories_burned_create_time","active_calories_goal","total_exercise_calories","calories_burned_tef_calorie","calories_burned_active_time","calories_burned_rest_calorie","calories_burned_active_calorie", "extra_data"],
+        "jsonPath_template": "com.samsung.shealth.calories_burned.details/{0}/{1}",
+    },
 }
 
 # -------------------- Warmup --------------------#
@@ -152,6 +152,7 @@ class App:
                 self.dataframes.get("hr"),
                 self.dataframes.get("spo2"),
                 self.dataframes.get("steps"),
+                self.dataframes.get("calorie"),
                 self.supabase_client
             ),
             'Activity': pg.show_activity,

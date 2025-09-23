@@ -244,13 +244,350 @@ def render_metric_tab(tab, metric_name, df, config, supabase_client=None):
                 st.altair_chart(st.session_state[f"{metric_name}_chartBin"], use_container_width=True)
             else:
                 st.info("No binning data available")
+from datetime import timedelta
+
+def localize_offset(series, offset_str):
+    """Shift a datetime series by an offset string like '+05:30' or '-03:00'."""
+    sign = 1 if offset_str[0] == '+' else -1
+    hours, minutes = map(int, offset_str[1:].split(':'))
+    delta = timedelta(hours=hours, minutes=minutes)
+    return series + sign * delta
+
+def cal_tab(tab, metric_name, df, config, supabase_client=None):
+    with tab:
+        st.header(f"{config['daily_icon']} {config['title']} Dashboard")
+        
+        # Create main layout columns
+        col1, col2 = st.columns([3, 1])
+        
+        with col1:
+            # View selector
+            view_option = st.radio(
+                "View Mode:",
+                ["Week View", "Month View"],
+                horizontal=True,
+                key=f"{metric_name}_view_selector"
+            )
+        
+        with col2:
+            # Timezone info
+            st.caption(f"Timezone: {config['time_offset']}")
+        
+        # Data preprocessing
+        if not df.empty:
+            # Convert timestamp columns
+            df[config['start_time']] = pd.to_datetime(df[config['start_time']], unit='ms', errors='coerce')
+            df[config['date']] = pd.to_datetime(df[config['date']], unit='ms', errors='coerce')
+            
+            # Apply timezone offset
+            # Apply timezone offset locally (no apply_offset needed)
+            offset_str = config['time_offset']  # e.g. "+5:30" or "-7:00"
+            sign = 1 if offset_str.startswith("+") else -1
+            hours, minutes = map(int, offset_str[1:].split(":"))
+            offset = pd.Timedelta(hours=sign * hours, minutes=sign * minutes)
+
+            df[config['start_time']] = df[config['start_time']] + offset
+            df[config['date']] = df[config['date']] + offset
+
+        
+        # Available calorie metrics for toggling
+        calorie_metrics = {
+            'Active Calories': config['calories_burned_active_calorie'],
+            'Rest Calories': config['calories_burned_rest_calorie'], 
+            'Exercise Calories': config['total_exercise_calories'],
+            'TEF Calories': config['calories_burned_tef_calorie'],
+            'Goal Calories': config['goal_calories']
+        }
+        
+        # Metric toggles
+        st.subheader("📊 Chart Options")
+        selected_metrics = []
+        cols = st.columns(3)
+        for i, (display_name, col_name) in enumerate(calorie_metrics.items()):
+            if col_name in df.columns:
+                with cols[i % 3]:
+                    if st.checkbox(display_name, value=True, key=f"cal_metric_{i}"):
+                        selected_metrics.append((display_name, col_name))
+        
+        if not selected_metrics:
+            st.warning("Please select at least one metric to display")
+            return
+        
+        # Main chart based on view mode
+        if not df.empty:
+            if view_option == "Week View":
+                chart_data = prepare_weekly_data(df, config, selected_metrics)
+                chart = create_weekly_chart(chart_data, selected_metrics)
+            else:
+                chart_data = prepare_monthly_data(df, config, selected_metrics)
+                chart = create_monthly_chart(chart_data, selected_metrics)
+            
+            if chart:
+                st.altair_chart(chart, use_container_width=True)
+        
+        # Expandable calendar and daily stats
+        with st.expander("📅 Daily Calorie Details", expanded=True):
+            col1, col2 = st.columns([2, 1])
+            
+            with col1:
+                # Calendar date picker
+                if not df.empty:
+                    min_date = df[config['date']].min().date()
+                    max_date = df[config['date']].max().date()
+                    selected_date = st.date_input(
+                        "Select Date:",
+                        value=min_date,
+                        min_value=min_date,
+                        max_value=max_date,
+                        key="calorie_date_picker"
+                    )
+                else:
+                    selected_date = st.date_input("Select Date:", key="calorie_date_picker")
+            
+            with col2:
+                st.write("")  # Spacer
+                if st.button("Refresh Day Stats", key="refresh_cal_stats"):
+                    st.rerun()
+            
+            # Display daily stats
+            if not df.empty and selected_date:
+                daily_data = df[df[config['date']].dt.date == selected_date]
+                
+                if not daily_data.empty:
+                    display_daily_stats(daily_data, config, selected_date)
+                    display_daily_charts(daily_data, config, selected_metrics)
+                else:
+                    st.info(f"No calorie data available for {selected_date}")
+            else:
+                st.info("Please select a date to view daily stats")
+
+def prepare_weekly_data(df, config, selected_metrics):
+    """Prepare weekly aggregated data"""
+    df_weekly = df.copy()
+    df_weekly['week'] = df_weekly[config['date']].dt.to_period('W').apply(lambda r: r.start_time)
+    
+    weekly_data = []
+    for week_start in df_weekly['week'].unique():
+        week_data = df_weekly[df_weekly['week'] == week_start]
+        week_record = {'week_start': week_start}
+        
+        for display_name, col_name in selected_metrics:
+            if col_name in week_data.columns:
+                week_record[display_name] = week_data[col_name].sum()
+        
+        weekly_data.append(week_record)
+    
+    return pd.DataFrame(weekly_data)
+
+def prepare_monthly_data(df, config, selected_metrics):
+    """Prepare monthly aggregated data"""
+    df_monthly = df.copy()
+    df_monthly['month'] = df_monthly[config['date']].dt.to_period('M').apply(lambda r: r.start_time)
+    
+    monthly_data = []
+    for month_start in df_monthly['month'].unique():
+        month_data = df_monthly[df_monthly['month'] == month_start]
+        month_record = {'month_start': month_start}
+        
+        for display_name, col_name in selected_metrics:
+            if col_name in month_data.columns:
+                month_record[display_name] = month_data[col_name].sum()
+        
+        monthly_data.append(month_record)
+    
+    return pd.DataFrame(monthly_data)
+
+def create_weekly_chart(df, selected_metrics):
+    """Create interactive weekly chart"""
+    if df.empty:
+        return None
+    
+    # Melt data for Altair
+    melted_data = df.melt(id_vars=['week_start'], 
+                         value_vars=[name for name, _ in selected_metrics],
+                         var_name='metric', value_name='calories')
+    
+    # Color scheme
+    colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FECA57', '#FF9FF3', '#54A0FF']
+    
+    # Create layered chart
+    base = alt.Chart(melted_data).encode(
+        x=alt.X('week_start:T', title='Week', axis=alt.Axis(format='%b %d'))
+    )
+    
+    layers = []
+    for i, (metric_name, _) in enumerate(selected_metrics):
+        metric_data = melted_data[melted_data['metric'] == metric_name]
+        
+        line = alt.Chart(metric_data).mark_line(
+            point=alt.OverlayMarkDef(size=60, filled=False, strokeWidth=2),
+            strokeWidth=3
+        ).encode(
+            y=alt.Y('calories:Q', title='Calories'),
+            color=alt.Color('metric:N', scale=alt.Scale(range=colors), legend=alt.Legend(title="Metric")),
+            tooltip=['week_start', 'metric', 'calories']
+        )
+        
+        layers.append(line)
+    
+    chart = alt.layer(*layers).properties(
+        height=400,
+        title='Weekly Calorie Trends'
+    ).interactive()
+    
+    return chart
+
+def create_monthly_chart(df, selected_metrics):
+    """Create interactive monthly chart"""
+    if df.empty:
+        return None
+    
+    # Melt data for Altair
+    melted_data = df.melt(id_vars=['month_start'], 
+                         value_vars=[name for name, _ in selected_metrics],
+                         var_name='metric', value_name='calories')
+    
+    # Color scheme
+    colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FECA57', '#FF9FF3', '#54A0FF']
+    
+    # Create bar chart with pattern
+    chart = alt.Chart(melted_data).mark_bar(
+        cornerRadiusTop=5,
+        opacity=0.8
+    ).encode(
+        x=alt.X('month_start:T', title='Month', axis=alt.Axis(format='%b %Y')),
+        y=alt.Y('calories:Q', title='Calories'),
+        color=alt.Color('metric:N', 
+                       scale=alt.Scale(range=colors), 
+                       legend=alt.Legend(title="Metric")),
+        tooltip=['month_start', 'metric', 'calories']
+    ).properties(
+        height=400,
+        title='Monthly Calorie Summary'
+    ).interactive()
+    
+    return chart
+
+def display_daily_stats(daily_data, config, selected_date):
+    """Display daily statistics in metric cards"""
+    st.subheader(f"📈 Daily Stats for {selected_date}")
+    
+    # Calculate metrics
+    metrics_data = {}
+    for col in [config['calories_burned_active_calorie'], 
+                config['calories_burned_rest_calorie'],
+                config['total_exercise_calories'],
+                config['calories_burned_tef_calorie'],
+                config['goal_calories']]:
+        if col in daily_data.columns:
+            metrics_data[col] = daily_data[col].sum()
+    
+    # Create metric cards
+    cols = st.columns(len(metrics_data))
+    
+    metric_config = {
+        config['calories_burned_active_calorie']: {'name': 'Active Calories', 'icon': '🔥'},
+        config['calories_burned_rest_calorie']: {'name': 'Rest Calories', 'icon': '😴'},
+        config['total_exercise_calories']: {'name': 'Exercise Calories', 'icon': '💪'},
+        config['calories_burned_tef_calorie']: {'name': 'TEF Calories', 'icon': '🍽️'},
+        config['goal_calories']: {'name': 'Goal Calories', 'icon': '🎯'}
+    }
+    
+    for i, (col, value) in enumerate(metrics_data.items()):
+        with cols[i]:
+            config_info = metric_config.get(col, {'name': col, 'icon': '📊'})
+            st.metric(
+                label=f"{config_info['icon']} {config_info['name']}",
+                value=f"{int(value):,}",
+                help=f"Total {config_info['name'].lower()} for the day"
+            )
+
+def display_daily_charts(daily_data, config, selected_metrics):
+    """Display daily breakdown charts"""
+    st.subheader("📊 Daily Breakdown")
+    
+    # Prepare data for charts
+    chart_data = []
+    for _, row in daily_data.iterrows():
+        for display_name, col_name in selected_metrics:
+            if col_name in row and pd.notna(row[col_name]):
+                chart_data.append({
+                    'metric': display_name,
+                    'calories': row[col_name],
+                    'time': row[config['start_time']]
+                })
+    
+    if not chart_data:
+        st.info("No detailed calorie data available for selected metrics")
+        return
+    
+    df_chart = pd.DataFrame(chart_data)
+    
+    # Create two chart views
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Pie chart for calorie distribution
+        pie_chart = alt.Chart(df_chart).mark_arc(innerRadius=50).encode(
+            theta=alt.Theta(field='calories', type='quantitative', stack=True),
+            color=alt.Color(field='metric', type='nominal', 
+                          legend=alt.Legend(title="Calorie Type")),
+            tooltip=['metric', 'calories']
+        ).properties(
+            title='Calorie Distribution',
+            height=300
+        )
+        
+        st.altair_chart(pie_chart, use_container_width=True)
+    
+    with col2:
+        # Bar chart by metric
+        bar_chart = alt.Chart(df_chart).mark_bar().encode(
+            x=alt.X('metric:N', title='Metric', axis=alt.Axis(labelAngle=0)),
+            y=alt.Y('calories:Q', title='Calories'),
+            color=alt.Color('metric:N', legend=None),
+            tooltip=['metric', 'calories']
+        ).properties(
+            title='Calories by Type',
+            height=300
+        )
+        
+        st.altair_chart(bar_chart, use_container_width=True)
+    
+    # Time-based chart if we have multiple time points
+    if len(daily_data) > 1:
+        st.subheader("🕒 Hourly Calorie Burn")
+        
+        time_chart_data = []
+        for _, row in daily_data.iterrows():
+            for display_name, col_name in selected_metrics:
+                if col_name in row and pd.notna(row[col_name]):
+                    time_chart_data.append({
+                        'metric': display_name,
+                        'calories': row[col_name],
+                        'hour': row[config['start_time']].hour
+                    })
+        
+        if time_chart_data:
+            df_time = pd.DataFrame(time_chart_data)
+            
+            line_chart = alt.Chart(df_time).mark_line(point=True).encode(
+                x=alt.X('hour:O', title='Hour of Day'),
+                y=alt.Y('calories:Q', title='Calories'),
+                color=alt.Color('metric:N', legend=alt.Legend(title="Metric")),
+                tooltip=['hour', 'metric', 'calories']
+            ).properties(
+                height=300
+            ).interactive()
+            
+            st.altair_chart(line_chart, use_container_width=True)
 
 
 
         
     
 ############ MAIN DASHBOARD #############
-def show_dashboard(df_stress,df_hr,df_spo2,df_steps,supabase_client):
+def show_dashboard(df_stress,df_hr,df_spo2,df_steps,df_calorie,supabase_client):
     p1_tab1,p1_tab2,p1_tab3,p1_tab4,p1_tab5 = st.tabs(['Stress Graph','Heart-Rate Graph','SpO2 Graph','Steps Graph','Calorie Graph'])
 
     configs = {
@@ -307,14 +644,29 @@ def show_dashboard(df_stress,df_hr,df_spo2,df_steps,supabase_client):
             "step_count_distance":"step_count_distance",
             "run_step":"run_step",
             "walk_step":"walk_step",
+        },
+        "calorie":{
+            "title": "Calories",
+            "daily_icon": "📆🍎",
+            "start_time": "calories_burned_create_time",
+            "date":"calories_burned_day_time",
+            "time_offset": "+05:30",
+            "y_label": "Calories",
+            "goal_calories":"active_calories_goal",
+            "total_exercise_calories":"total_exercise_calories",
+            "calories_burned_tef_calorie":"calories_burned_tef_calorie",
+            "calories_burned_active_time":"calories_burned_active_time",
+            "calories_burned_rest_calorie":"calories_burned_rest_calorie",
+            "calories_burned_active_calorie":"calories_burned_active_calorie",             
         }
-        # to add steps, calorie later with same structure
     }
 
     render_metric_tab(p1_tab1,"stress",df_stress,configs["stress"],supabase_client)
     render_metric_tab(p1_tab2,"hr",df_hr,configs["hr"],supabase_client)
     render_metric_tab(p1_tab3,"spo2",df_spo2,configs["spo2"],supabase_client)
     render_metric_tab(p1_tab4,"steps",df_steps,configs["steps"],supabase_client)
+    cal_tab(p1_tab5, "calorie", df_calorie, configs["calorie"], supabase_client)
+
 
 
 def chartTimeData(df,xval,yval,xtitle,ytitle,chart_title,chart_type="line"):
