@@ -406,17 +406,9 @@ def create_weekly_chart(df, config, selected_metrics):
             st.session_state.current_month_idx -= 1
             st.session_state.current_week = None
     with col2:
-        st.markdown(
-        f"""
-        <div style='display: flex; align-items: center; justify-content: center; height: 100%;'>
-            <h3 style='margin: 0;'>{current_month.strftime('%B %Y')}</h3>
-        </div>
-        """,
-        unsafe_allow_html=True
-        )
-        # if st.button("🔄 Reset to Current Month"):
-        #     st.session_state.current_month_idx = len(unique_months) - 1
-        #     st.session_state.current_week = None
+        if st.button(f"{current_month.strftime('%B %Y')}",use_container_width=True):
+            st.session_state.current_month_idx = len(unique_months) - 1
+            st.session_state.current_week = None
     with col3:
         if st.button("Next Month ➡️",use_container_width=True) and current_month_idx < len(unique_months) - 1:
             st.session_state.current_month_idx += 1
