@@ -1,10 +1,7 @@
 import streamlit as st
-import streamlit as st
 import pandas as pd
 import numpy as np
-import os,json
-import datetime
-import re
+import os,json,re,datetime
 from datetime import timedelta
 import altair as alt
 
@@ -94,7 +91,7 @@ def render_metric_tab(tab, metric_name, df, config, supabase_client=None):
                     # summary metrics
                     mcol1, mcol2, mcol3, mcol4 = st.columns(4)
                     mcol1.metric("Total steps (day)", int(daily[config["value"]].sum()))
-                    mcol2.metric("Total Calories Burnt (day)", int(daily[config["step_count_calorie"]].sum()))
+                    mcol2.metric("Total Calories Burned (day)", int(daily[config["step_count_calorie"]].sum()))
                     mcol3.metric("Avg speed (day)", int(daily[config["step_count_speed"]].mean()))
                     mcol4.metric("Total distance (m)", round(daily.get("step_count_distance", pd.Series([0])).sum(), 2))
 
@@ -159,7 +156,7 @@ def render_metric_tab(tab, metric_name, df, config, supabase_client=None):
                         x=alt.X(f"{config['value']}:Q", bin=alt.Bin(maxbins=40), title="Step count"),
                         y=alt.Y("count()", title="Frequency"),
                         tooltip=[alt.Tooltip(f"{config['value']}:Q")]
-                    ).properties(title="Distribution of step_count_count")
+                    ).properties(title="Distribution of Step Counts")
                     r2c2.altair_chart(hist, use_container_width=True)
 
                     # Row 3: boxplot calories and scatter steps vs calories
@@ -244,14 +241,6 @@ def render_metric_tab(tab, metric_name, df, config, supabase_client=None):
                 st.altair_chart(st.session_state[f"{metric_name}_chartBin"], use_container_width=True)
             else:
                 st.info("No binning data available")
-from datetime import timedelta
-
-def localize_offset(series, offset_str):
-    """Shift a datetime series by an offset string like '+05:30' or '-03:00'."""
-    sign = 1 if offset_str[0] == '+' else -1
-    hours, minutes = map(int, offset_str[1:].split(':'))
-    delta = timedelta(hours=hours, minutes=minutes)
-    return series + sign * delta
 
 def cal_tab(tab, metric_name, df, config, supabase_client=None):
     with tab:
@@ -299,31 +288,22 @@ def cal_tab(tab, metric_name, df, config, supabase_client=None):
             'Goal Calories': config['goal_calories']
         }
         
-        # Metric toggles
-        st.subheader("📊 Chart Options")
-        selected_metrics = []
-        cols = st.columns(3)
-        for i, (display_name, col_name) in enumerate(calorie_metrics.items()):
-            if col_name in df.columns:
-                with cols[i % 3]:
-                    if st.checkbox(display_name, value=True, key=f"cal_metric_{i}"):
-                        selected_metrics.append((display_name, col_name))
-        
-        if not selected_metrics:
-            st.warning("Please select at least one metric to display")
-            return
-        
+        # Metric
+        selected_metrics = [(display_name, col_name) for display_name, col_name in calorie_metrics.items() if col_name in df.columns]        
         # Main chart based on view mode
         if not df.empty:
             if view_option == "Week View":
                 chart_data = prepare_weekly_data(df, config, selected_metrics)
-                chart = create_weekly_chart(chart_data, selected_metrics)
+                chart,chrtdf = create_weekly_chart(chart_data, config,selected_metrics)
             else:
                 chart_data = prepare_monthly_data(df, config, selected_metrics)
                 chart = create_monthly_chart(chart_data, selected_metrics)
             
             if chart:
-                st.altair_chart(chart, use_container_width=True)
+                colchrt,coldf = st.columns([4,2]) 
+                colchrt.altair_chart(chart, use_container_width=True)
+                with coldf.expander('Week Summary'):
+                    st.dataframe(chrtdf.style.format("{:.2f}"))
         
         # Expandable calendar and daily stats
         with st.expander("📅 Daily Calorie Details", expanded=True):
@@ -361,23 +341,150 @@ def cal_tab(tab, metric_name, df, config, supabase_client=None):
             else:
                 st.info("Please select a date to view daily stats")
 
+
+
 def prepare_weekly_data(df, config, selected_metrics):
-    """Prepare weekly aggregated data"""
-    df_weekly = df.copy()
-    df_weekly['week'] = df_weekly[config['date']].dt.to_period('W').apply(lambda r: r.start_time)
+    """
+    Prepare daily data for weekly/monthly charting.
+    Adds:
+    - week_start (Monday of the week)
+    - month_start (first day of month)
+    - week_number within the month
+    """
+    df_prepared = df.copy()
+    df_prepared[config['date']] = pd.to_datetime(df_prepared[config['date']])
+
+    # Month and week info
+    df_prepared['month_start'] = df_prepared[config['date']].dt.to_period('M').apply(lambda r: r.start_time)
+    df_prepared['week_start'] = df_prepared[config['date']].dt.to_period('W').apply(lambda r: r.start_time)
+
+    # Compute week number within month
+    df_prepared['week_number'] = df_prepared.groupby('month_start')['week_start'].rank(method='dense').astype(int)
+
+    # Rename metric columns for display
+    for display_name, col_name in selected_metrics:
+        if col_name in df_prepared.columns:
+            df_prepared[display_name] = df_prepared[col_name]
+
+    # Return daily-level data with extra columns
+    return df_prepared[['month_start', 'week_start', 'week_number', config['date']] +
+                       [name for name, _ in selected_metrics]]
+
+
+def create_weekly_chart(df, config, selected_metrics):
+    import altair as alt
+    import pandas as pd
+    import streamlit as st
+
+    if df.empty:
+        st.info("No data available")
+        return None
+
+    # Ensure datetime
+    df[config['date']] = pd.to_datetime(df[config['date']])
+
+    # --- Month & Week Columns ---
+    if 'month_start' not in df.columns:
+        df['month_start'] = df[config['date']].dt.to_period('M').apply(lambda r: r.start_time)
+    if 'week_number' not in df.columns:
+        df['week_number'] = df[config['date']].dt.isocalendar().week
+
+    # --- Initialize session state ---
+    if 'current_month_idx' not in st.session_state:
+        st.session_state.current_month_idx = 0
+    if 'current_week' not in st.session_state:
+        st.session_state.current_week = None
+
+    unique_months = sorted(df['month_start'].unique())
+    current_month_idx = st.session_state.current_month_idx
+    current_month = unique_months[current_month_idx]
+
+    # --- Month Navigation ---
+    col1, col2, col3 = st.columns([1, 2, 1],gap='small')
+    with col1:
+        if st.button("⬅️ Prev Month",use_container_width=True) and current_month_idx > 0:
+            st.session_state.current_month_idx -= 1
+            st.session_state.current_week = None
+    with col2:
+        st.markdown(
+        f"""
+        <div style='display: flex; align-items: center; justify-content: center; height: 100%;'>
+            <h3 style='margin: 0;'>{current_month.strftime('%B %Y')}</h3>
+        </div>
+        """,
+        unsafe_allow_html=True
+        )
+        # if st.button("🔄 Reset to Current Month"):
+        #     st.session_state.current_month_idx = len(unique_months) - 1
+        #     st.session_state.current_week = None
+    with col3:
+        if st.button("Next Month ➡️",use_container_width=True) and current_month_idx < len(unique_months) - 1:
+            st.session_state.current_month_idx += 1
+            st.session_state.current_week = None
+
+    # --- Week Buttons ---
+    weeks_in_month = sorted(df[df['month_start'] == current_month]['week_number'].unique())
+    if st.session_state.current_week not in weeks_in_month:
+        st.session_state.current_week = weeks_in_month[0]
+
+    week_cols = st.columns(len(weeks_in_month),gap='small')
     
-    weekly_data = []
-    for week_start in df_weekly['week'].unique():
-        week_data = df_weekly[df_weekly['week'] == week_start]
-        week_record = {'week_start': week_start}
-        
-        for display_name, col_name in selected_metrics:
-            if col_name in week_data.columns:
-                week_record[display_name] = week_data[col_name].sum()
-        
-        weekly_data.append(week_record)
-    
-    return pd.DataFrame(weekly_data)
+    for i, wk in enumerate(weeks_in_month):
+        # Highlight active week
+        if wk == st.session_state.current_week:
+            if week_cols[i].button(f"**Week {i+1}** 🔹",use_container_width=True):
+                st.session_state.current_week = wk
+        else:
+            if week_cols[i].button(f"Week {i+1}",use_container_width=True):
+                st.session_state.current_week = wk
+
+    # Filter data for current week
+    week_data = df[(df['month_start'] == current_month) & (df['week_number'] == st.session_state.current_week)]
+    if week_data.empty:
+        st.warning("No data for selected week")
+        return None
+
+    week_start = week_data[config['date']].min()
+    week_end = week_data[config['date']].max()
+    st.markdown(f"### Week {weeks_in_month.index(st.session_state.current_week)+1}: {week_start.strftime('%b %d')} - {week_end.strftime('%b %d')}")
+
+    # --- Metric Selection ---
+    metrics_display = [name for name, _ in selected_metrics]
+    selected_metrics_ui = st.multiselect("Select Metrics to Show", metrics_display, default=metrics_display)
+
+    # Melt data for Altair
+    melted_data = week_data.melt(
+        id_vars=[config['date']],
+        value_vars=selected_metrics_ui,
+        var_name='metric',
+        value_name='value'
+    )
+
+    # Fixed color mapping
+    colors = ['#FF6B6B', '#4ECDC4', '#45B7D1',
+              '#96CEB4', '#FECA57', '#FF9FF3', '#54A0FF']
+    color_scale = alt.Scale(domain=metrics_display, range=colors[:len(metrics_display)])
+
+    # --- Altair Chart ---
+    chart = (
+        alt.Chart(melted_data)
+        .mark_line(point=alt.OverlayMarkDef(size=60, filled=True))
+        .encode(
+            x=alt.X(f"{config['date']}:T", title="Day", axis=alt.Axis(format="%a %d")),
+            y=alt.Y("value:Q", title="Value"),
+            color=alt.Color("metric:N", scale=color_scale, legend=alt.Legend(title="Metric")),
+            tooltip=[config['date'], "metric", "value"]
+        )
+        .properties(height=400, title="Daily Metrics")
+        .interactive()
+    )
+
+    # --- Summary Stats ---
+    summary = week_data[selected_metrics_ui].agg(['sum', 'mean', 'max']).T
+    summary.columns = ['Total', 'Average', 'Max']
+
+    return chart,summary
+
 
 def prepare_monthly_data(df, config, selected_metrics):
     """Prepare monthly aggregated data"""
@@ -397,46 +504,6 @@ def prepare_monthly_data(df, config, selected_metrics):
     
     return pd.DataFrame(monthly_data)
 
-def create_weekly_chart(df, selected_metrics):
-    """Create interactive weekly chart"""
-    if df.empty:
-        return None
-    
-    # Melt data for Altair
-    melted_data = df.melt(id_vars=['week_start'], 
-                         value_vars=[name for name, _ in selected_metrics],
-                         var_name='metric', value_name='calories')
-    
-    # Color scheme
-    colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FECA57', '#FF9FF3', '#54A0FF']
-    
-    # Create layered chart
-    base = alt.Chart(melted_data).encode(
-        x=alt.X('week_start:T', title='Week', axis=alt.Axis(format='%b %d'))
-    )
-    
-    layers = []
-    for i, (metric_name, _) in enumerate(selected_metrics):
-        metric_data = melted_data[melted_data['metric'] == metric_name]
-        
-        line = alt.Chart(metric_data).mark_line(
-            point=alt.OverlayMarkDef(size=60, filled=False, strokeWidth=2),
-            strokeWidth=3
-        ).encode(
-            y=alt.Y('calories:Q', title='Calories'),
-            color=alt.Color('metric:N', scale=alt.Scale(range=colors), legend=alt.Legend(title="Metric")),
-            tooltip=['week_start', 'metric', 'calories']
-        )
-        
-        layers.append(line)
-    
-    chart = alt.layer(*layers).properties(
-        height=400,
-        title='Weekly Calorie Trends'
-    ).interactive()
-    
-    return chart
-
 def create_monthly_chart(df, selected_metrics):
     """Create interactive monthly chart"""
     if df.empty:
@@ -452,7 +519,8 @@ def create_monthly_chart(df, selected_metrics):
     
     # Create bar chart with pattern
     chart = alt.Chart(melted_data).mark_bar(
-        cornerRadiusTop=5,
+        cornerRadiusTopLeft=5,
+        cornerRadiusTopRight=5,
         opacity=0.8
     ).encode(
         x=alt.X('month_start:T', title='Month', axis=alt.Axis(format='%b %Y')),
@@ -582,9 +650,7 @@ def display_daily_charts(daily_data, config, selected_metrics):
             
             st.altair_chart(line_chart, use_container_width=True)
 
-
-
-        
+       
     
 ############ MAIN DASHBOARD #############
 def show_dashboard(df_stress,df_hr,df_spo2,df_steps,df_calorie,supabase_client):
@@ -666,8 +732,6 @@ def show_dashboard(df_stress,df_hr,df_spo2,df_steps,df_calorie,supabase_client):
     render_metric_tab(p1_tab3,"spo2",df_spo2,configs["spo2"],supabase_client)
     render_metric_tab(p1_tab4,"steps",df_steps,configs["steps"],supabase_client)
     cal_tab(p1_tab5, "calorie", df_calorie, configs["calorie"], supabase_client)
-
-
 
 def chartTimeData(df,xval,yval,xtitle,ytitle,chart_title,chart_type="line"):
     # defensive copy
@@ -873,7 +937,6 @@ def loadBinningjsons(offset_col,jsonfilepath,supabase):
     dfjson["end_time"] = dfjson.apply(lambda row: apply_offset(row,"offset_time","end_time"),axis =1)
     dfjson = dfjson.sort_values("start_time")
     return dfjson
-
 
 def chartBinningjsons(dfJson,xval,xtitle,yval,ytitle,yminval,ymaxval):
     ### improved viz: smooth line, shaded band, hover tooltips, median rule, adaptive y-domain

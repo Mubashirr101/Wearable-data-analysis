@@ -115,6 +115,27 @@
             "datauuid",
             "default_number_of_serving_unit"
         ],
+        "com.samsung.health.food_intake": [
+            "create_sh_ver",
+            "start_time",
+            "amount",
+            "custom",
+            "modify_sh_ver",
+            "update_time",
+            "create_time",
+            "meal_type",
+            "client_data_id",
+            "name",
+            "unit",
+            "client_data_ver",
+            "calorie",
+            "time_offset",
+            "deviceuuid",
+            "comment",
+            "pkg_name",
+            "datauuid",
+            "food_info_id"
+        ],
         "com.samsung.health.height": [
             "create_sh_ver",
             "start_time",
