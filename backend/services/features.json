@@ -988,6 +988,16 @@
             "datauuid",
             "day_time"
         ],
+        "com.samsung.shealth.tracker.pedometer_recommendation": [
+            "update_time",
+            "create_time",
+            "value",
+            "time_offset",
+            "deviceuuid",
+            "pkg_name",
+            "set_time",
+            "datauuid"
+        ],
         "com.samsung.shealth.tracker.pedometer_step_count": [
             "duration",
             "version_code",
