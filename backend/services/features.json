@@ -519,6 +519,18 @@
             "pkg_name",
             "datauuid"
         ],
+        "com.samsung.shealth.exercise.periodization_training_program": [
+            "create_sh_ver",
+            "start_time",
+            "modify_sh_ver",
+            "update_time",
+            "create_time",
+            "program",
+            "time_offset",
+            "deviceuuid",
+            "pkg_name",
+            "datauuid"
+        ],
         "com.samsung.shealth.exercise.periodization_training_schedule": [
             "create_sh_ver",
             "start_time",
