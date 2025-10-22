@@ -5,52 +5,58 @@ import os,json,re,datetime
 from datetime import timedelta
 import altair as alt
 
-session = st.session_state
-for k in session.keys():
-    session[k] = session[k]
+# session = st.session_state
+# for k in session.keys():
+#     session[k] = session[k]
 
 
 def render_metric_tab(tab, metric_name, df, config, supabase_client=None):
-    ## Renders the metric tab including daily and hourly charts.
-    ## For 'steps', also renders summary chart from steps_summary.source_info JSON.
-    ## Skips hourly chart for steps if summary is displayed.    
     with tab:
         col1, col2 = st.columns([4, 2])
         col1.header(f"{config.get('daily_icon','📆')} Daily {config['title']} Chart")
 
-        # ---------- Date filter ----------
+        # Initialize session key for filtered data
+        if f"df_{metric_name}_filtered" not in st.session_state:
+            st.session_state[f"df_{metric_name}_filtered"] = pd.DataFrame()
+
+        # ---------- Date Filter ----------
         date_filter = col2.date_input(
-            f'{metric_name}_Date',
+            f"{metric_name}_Date",
             key=f"{metric_name}_date_filter",
             label_visibility="hidden"
         )
-        
+
+        # If a date is selected, filter; otherwise reuse persisted data
         if date_filter:
-            df_filtered = df[df[config["start_time"]].dt.date == pd.to_datetime(date_filter).date()].copy()
-            st.session_state[f"df_{metric_name}_filtered"] = df_filtered
+            df_filtered = df[df[config["localized_time"]].dt.date == pd.to_datetime(date_filter).date()].copy()
+            if not df_filtered.empty:
+                st.session_state[f"df_{metric_name}_filtered"] = df_filtered
         else:
-            df_filtered = df.iloc[0:0]
+            df_filtered = st.session_state.get(f"df_{metric_name}_filtered", pd.DataFrame())
 
-        # ---------- Daily chart ----------
+        # Use the last known filtered data if the new one is empty
+        if df_filtered.empty and f"df_{metric_name}_filtered" in st.session_state:
+            df_filtered = st.session_state[f"df_{metric_name}_filtered"]
+
+        # ---------- Daily Chart ----------
         chart_type_map = {
-            'hr': 'hr',
-            'stress': 'stress',
-            'spo2': 'spo2',
-            'steps': 'steps',
-            'calorie': 'calorie'
+            "hr": "hr",
+            "stress": "stress",
+            "spo2": "spo2",
+            "steps": "steps",
+            "calorie": "calorie"
         }
-    
-
 
         chart_daily = chartTimeData(
             df_filtered,
-            config["start_time"],
+            config["localized_time"],
             config["value"],
             "Time/Date",
             config["y_label"],
             f"{config.get('daily_icon','📆')} {config['title']} over Time",
-            chart_type=chart_type_map.get(metric_name, 'line')
+            chart_type=chart_type_map.get(metric_name, "line")
         )
+        print(df_filtered.head(5))
         st.altair_chart(chart_daily, use_container_width=True)
 
         # ----------  Adv Chart ----------
@@ -63,11 +69,11 @@ def render_metric_tab(tab, metric_name, df, config, supabase_client=None):
                 adv_chart_displayed = True
                 df_steps = df_filtered.copy()
                 # ensure datetime
-                df_steps[config["start_time"]] = pd.to_datetime(df_steps[config["start_time"]], errors="coerce")
-                df_steps = df_steps.sort_values(config["start_time"])
+                df_steps[config["localized_time"]] = pd.to_datetime(df_steps[config["localized_time"]], errors="coerce")
+                df_steps = df_steps.sort_values(config["localized_time"])
                 # daily aggregates (resample by day)
                 try:
-                    daily = df_steps.set_index(config["start_time"]).resample("D").agg({
+                    daily = df_steps.set_index(config["localized_time"]).resample("D").agg({
                         config["value"]: "sum",
                         "run_step": "sum" if "run_step" in df_steps.columns else "mean",
                         "walk_step": "sum" if "walk_step" in df_steps.columns else "mean",
@@ -77,7 +83,7 @@ def render_metric_tab(tab, metric_name, df, config, supabase_client=None):
                     }).reset_index()
                 except Exception:
                     # fallback simple groupby day
-                    df_steps["day"] = df_steps[config["start_time"]].dt.date
+                    df_steps["day"] = df_steps[config["localized_time"]].dt.date
                     daily = df_steps.groupby("day").agg({
                         config["value"]: "sum",
                         "run_step": "sum" if "run_step" in df_steps.columns else "mean",
@@ -85,7 +91,7 @@ def render_metric_tab(tab, metric_name, df, config, supabase_client=None):
                         "step_count_speed": "mean" if "step_count_speed" in df_steps.columns else "mean",
                         "step_count_distance": "sum" if "step_count_distance" in df_steps.columns else "sum",
                         "step_count_calorie": "sum" if "step_count_calorie" in df_steps.columns else "sum",
-                    }).reset_index().rename(columns={"day": config["start_time"]})
+                    }).reset_index().rename(columns={"day": config["localized_time"]})
 
                 with st.expander("Advanced charts — detailed steps features", expanded=True):
                     # summary metrics
@@ -100,8 +106,8 @@ def render_metric_tab(tab, metric_name, df, config, supabase_client=None):
                     # stacked run/walk
                     if {"run_step","walk_step"}.issubset(df_steps.columns):
                         # fold in pandas so Altair has concrete dtypes
-                        folded = daily[[config["start_time"], "run_step", "walk_step"]].melt(
-                            id_vars=[config["start_time"]],
+                        folded = daily[[config["localized_time"], "run_step", "walk_step"]].melt(
+                            id_vars=[config["localized_time"]],
                             value_vars=["run_step", "walk_step"],
                             var_name="type",
                             value_name="count"
@@ -110,26 +116,26 @@ def render_metric_tab(tab, metric_name, df, config, supabase_client=None):
                         folded["count"] = pd.to_numeric(folded["count"], errors="coerce").fillna(0)
 
                         stacked = alt.Chart(folded).mark_bar().encode(
-                            x=alt.X(config["start_time"], title="Date", axis=alt.Axis(format="%Y-%m-%d")),
+                            x=alt.X(config["localized_time"], title="Date", axis=alt.Axis(format="%Y-%m-%d")),
                             y=alt.Y("count:Q", title="Count"),
                             color=alt.Color("type:N"),
-                            tooltip=[config["start_time"], alt.Tooltip("type:N"), alt.Tooltip("count:Q")]
+                            tooltip=[config["localized_time"], alt.Tooltip("type:N"), alt.Tooltip("count:Q")]
                         ).properties(title="Run vs Walk counts per day")
                         r1c1.altair_chart(stacked, use_container_width=True)
                     else:
                         r1c1.info("run_step / walk_step not available in this dataset")
 
                     # steps with rolling mean
-                    df_steps_time = df_steps[[config["start_time"], config["value"]]].dropna().copy()
+                    df_steps_time = df_steps[[config["localized_time"], config["value"]]].dropna().copy()
                     if not df_steps_time.empty:
-                        df_steps_time = df_steps_time.set_index(config["start_time"]).resample("h").sum().reset_index()
+                        df_steps_time = df_steps_time.set_index(config["localized_time"]).resample("h").sum().reset_index()
                         df_steps_time["rolling_3h"] = df_steps_time[config["value"]].rolling(3, min_periods=1).mean()
                         steps_line = alt.Chart(df_steps_time).encode(
-                            x=alt.X(config["start_time"], title="Time"),
+                            x=alt.X(config["localized_time"], title="Time"),
                         )
                         line = steps_line.mark_line(color="purple").encode(
                             y=alt.Y(config["value"], title="Steps"),
-                            tooltip=[config["start_time"], config["value"]]
+                            tooltip=[config["localized_time"], config["value"]]
                         )
                         rolling = steps_line.mark_line(strokeDash=[4,4], color="black").encode(
                             y=alt.Y("rolling_3h:Q", title="Rolling mean")
@@ -145,7 +151,7 @@ def render_metric_tab(tab, metric_name, df, config, supabase_client=None):
                             x=alt.X("step_count_speed:Q", title="Speed"),
                             y=alt.Y("step_count_distance:Q", title="Distance"),
                             color=alt.Color("run_step:N", title="Run vs Walk") if "run_step" in df_steps.columns else alt.value("steelblue"),
-                            tooltip=[config["start_time"], "step_count_speed", "step_count_distance", config["value"]]
+                            tooltip=[config["localized_time"], "step_count_speed", "step_count_distance", config["value"]]
                         ).interactive().properties(title="Speed vs Distance (points colored by run_step if available)")
                         r2c1.altair_chart(scatter, use_container_width=True)
                     else:
@@ -174,7 +180,7 @@ def render_metric_tab(tab, metric_name, df, config, supabase_client=None):
                         scatter2 = alt.Chart(df_steps.dropna(subset=[config["value"], "step_count_calorie"])).mark_circle().encode(
                             x=alt.X(config["value"], title="Steps"),
                             y=alt.Y("step_count_calorie", title="Calories"),
-                            tooltip=[config["start_time"], config["value"], "step_count_calorie"]
+                            tooltip=[config["localized_time"], config["value"], "step_count_calorie"]
                         ).properties(title="Steps vs Calories")
                         r3c2.altair_chart(scatter2, use_container_width=True)
                     else:
@@ -205,8 +211,8 @@ def render_metric_tab(tab, metric_name, df, config, supabase_client=None):
 
                 if not df_filtered.empty and time_filter != datetime.time(0, 0):
                     df_copy = df_filtered
-                    df_copy['start_time'] = df_copy.apply(lambda row: apply_offset(row, config['time_offset'], config['start_time']), axis=1)
-                    match = df_copy.loc[df_copy["start_time"].dt.time == time_filter]
+                    # df_copy['start_time'] = df_copy.apply(lambda row: apply_offset(row, config['time_offset'], config['start_time']), axis=1)
+                    match = df_copy.loc[df_copy["localized_time"].dt.time == time_filter]
                     if not match.empty:
                         jsonFilepath = match.iloc[0]['jsonPath']
                         # cache json
@@ -265,7 +271,7 @@ def cal_tab(tab, metric_name, df, config, supabase_client=None):
         # Data preprocessing
         if not df.empty:
             # Convert timestamp columns
-            df[config['start_time']] = pd.to_datetime(df[config['start_time']], unit='ms', errors='coerce')
+            df[config['localized_time']] = pd.to_datetime(df[config['localized_time']], unit='ms', errors='coerce')
             df[config['date']] = pd.to_datetime(df[config['date']], unit='ms', errors='coerce')
             
             # Apply timezone offset
@@ -275,7 +281,7 @@ def cal_tab(tab, metric_name, df, config, supabase_client=None):
             hours, minutes = map(int, offset_str[1:].split(":"))
             offset = pd.Timedelta(hours=sign * hours, minutes=sign * minutes)
 
-            df[config['start_time']] = df[config['start_time']] + offset
+            df[config['localized_time']] = df[config['localized_time']] + offset
             df[config['date']] = df[config['date']] + offset
 
         
@@ -357,7 +363,7 @@ def prepare_weekly_data(df, config, selected_metrics):
     df_prepared[config['date']] = pd.to_datetime(df_prepared[config['date']])
 
     # Month and week info
-    df_prepared['month_start'] = df_prepared[config['date']].dt.to_period('M').apply(lambda r: r.start_time)
+    df_prepared['month_start'] = df_prepared[config['date']].dt.to_period('M').apply(lambda r: r.start_time )
     df_prepared['week_start'] = df_prepared[config['date']].dt.to_period('W').apply(lambda r: r.start_time)
 
     # Compute week number within month
@@ -625,7 +631,7 @@ def display_daily_charts(daily_data, config, selected_metrics):
                 chart_data.append({
                     'metric': display_name,
                     'calories': row[col_name],
-                    'time': row[config['start_time']]
+                    'time': row[config['localized_time']]
                 })
     
     if not chart_data:
@@ -676,7 +682,7 @@ def display_daily_charts(daily_data, config, selected_metrics):
                     time_chart_data.append({
                         'metric': display_name,
                         'calories': row[col_name],
-                        'hour': row[config['start_time']].hour
+                        'hour': row[config['localized_time']].hour
                     })
         
         if time_chart_data:
@@ -704,7 +710,7 @@ def show_dashboard(df_stress,df_hr,df_spo2,df_steps,df_calorie,supabase_client):
             "title": "Stress",
             "daily_icon": "📆🧠",
             "hourly_icon": "⌚🧠",
-            "start_time": "start_time",
+            "localized_time": "localized_time",
             "time_offset": "time_offset",
             "value": "score",
             "value_bin": "score",
@@ -716,7 +722,7 @@ def show_dashboard(df_stress,df_hr,df_spo2,df_steps,df_calorie,supabase_client):
             "title": "Heart Rate",
             "daily_icon": "📆🫀",
             "hourly_icon": "⌚🫀",
-            "start_time": "heart_rate_start_time",
+            "localized_time": "localized_time",
             "time_offset": "heart_rate_time_offset",
             "value": "heart_rate_heart_rate",
             "value_bin": "heart_rate",
@@ -728,7 +734,7 @@ def show_dashboard(df_stress,df_hr,df_spo2,df_steps,df_calorie,supabase_client):
             "title": "SpO₂",
             "daily_icon": "📆🩸",
             "hourly_icon": "⌚🩸",
-            "start_time": "oxygen_saturation_start_time",
+            "localized_time": "localized_time",
             "time_offset": "oxygen_saturation_time_offset",
             "value": "oxygen_saturation_spo2",
             "value_bin": "spo2",
@@ -741,7 +747,7 @@ def show_dashboard(df_stress,df_hr,df_spo2,df_steps,df_calorie,supabase_client):
             "daily_icon": "📆👟",
             "summary_icon": "📊👟",
             "hourly_icon": "⌚👟",
-            "start_time": "step_count_start_time",
+            "localized_time": "localized_time",
             "time_offset": "step_count_time_offset",
             "value": "step_count_count",
             "value_bin": "steps",
@@ -757,7 +763,7 @@ def show_dashboard(df_stress,df_hr,df_spo2,df_steps,df_calorie,supabase_client):
         "calorie":{
             "title": "Calories",
             "daily_icon": "📆🍎",
-            "start_time": "calories_burned_create_time",
+            "localized_time": "localized_time",
             "date":"calories_burned_day_time",
             "time_offset": "+05:30",
             "y_label": "Calories",
@@ -776,9 +782,9 @@ def show_dashboard(df_stress,df_hr,df_spo2,df_steps,df_calorie,supabase_client):
     render_metric_tab(p1_tab4,"steps",df_steps,configs["steps"],supabase_client)
     cal_tab(p1_tab5, "calorie", df_calorie, configs["calorie"], supabase_client)
 
-def chartTimeData(df,xval,yval,xtitle,ytitle,chart_title,chart_type="line"):
+def chartTimeData(df_og,xval,yval,xtitle,ytitle,chart_title,chart_type="line"):
     # defensive copy
-    df = df.copy() if not df.empty else pd.DataFrame({xval: [], yval: []})
+    df = df_og.copy() if not df_og.empty else pd.DataFrame({xval: [], yval: []})
 
     # add metric title column for tooltip
     df["_metric_title"] = chart_title
@@ -792,8 +798,8 @@ def chartTimeData(df,xval,yval,xtitle,ytitle,chart_title,chart_type="line"):
         if "time_offset" in col:
             offset_col = col
             break
-    if offset_col and not df.empty:
-        df[xval] = df.apply(lambda row: apply_offset(row, offset_col, xval), axis=1)
+    # if offset_col and not df.empty:
+    #     df[xval] = df.apply(lambda row: apply_offset(row, offset_col, xval), axis=1)
 
     # base_date and forced x-domain for single-day view
     if df[xval].notna().any():
@@ -950,22 +956,22 @@ def chartTimeData(df,xval,yval,xtitle,ytitle,chart_title,chart_type="line"):
 
     return chart
 
-def apply_offset(row,offset_col,time_col):
-    ## extract offset from the offset feature
-    offset_val = row[offset_col]
-    if pd.isnull(offset_val):
-        return row[offset_col]
-    offset_str = str(offset_val)
-    match = re.match(r"UTC([+-])(\d{2})(\d{2})",offset_str)
-    if match:
-        sign,hh,mm = match.groups()
-        hours,minutes = int(hh),int(mm)
-        delta = timedelta(hours=hours,minutes=minutes)
-        if sign == "-":
-            delta = -delta
-        ## shift time
-        return row[time_col]+delta
-    return row[time_col]
+# def apply_offset(row,offset_col,time_col):
+#     ## extract offset from the offset feature
+#     offset_val = row[offset_col]
+#     if pd.isnull(offset_val):
+#         return row[offset_col]
+#     offset_str = str(offset_val)
+#     match = re.match(r"UTC([+-])(\d{2})(\d{2})",offset_str)
+#     if match:
+#         sign,hh,mm = match.groups()
+#         hours,minutes = int(hh),int(mm)
+#         delta = timedelta(hours=hours,minutes=minutes)
+#         if sign == "-":
+#             delta = -delta
+#         ## shift time
+#         return row[time_col]+delta
+#     return row[time_col]
 
 def loadBinningjsons(offset_col,jsonfilepath,supabase):    
     bucket_name = "json-bucket"
@@ -1060,3 +1066,22 @@ def chartBinningjsons(dfJson,xval,xtitle,yval,ytitle,yminval,ymaxval):
     ).interactive()  # enable pan/zoom
 
     return chartBin
+def apply_offset(row, offset_col, time_col):
+    offset_val = row[offset_col]
+    if pd.isnull(offset_val):
+        return row[time_col]
+    offset_str = str(offset_val)
+    match = None
+    # Accept both "UTC+0530" and "+05:30" formats
+    if offset_str.startswith("UTC"):
+        match = re.match(r"UTC([+-])(\d{2})(\d{2})", offset_str)
+    else:
+        match = re.match(r"([+-])(\d{2}):?(\d{2})", offset_str)
+    if match:
+        sign, hh, mm = match.groups()
+        hours, minutes = int(hh), int(mm)
+        delta = timedelta(hours=hours, minutes=minutes)
+        if sign == "-":
+            delta = -delta
+        return row[time_col] + delta
+    return row[time_col]

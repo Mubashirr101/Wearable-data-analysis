@@ -1,4 +1,4 @@
-import os, json, urllib.parse, datetime
+import os, json, urllib.parse, datetime, re
 import pandas as pd
 import streamlit as st
 from dotenv import load_dotenv
@@ -6,7 +6,28 @@ from sqlalchemy import create_engine, text
 from supabase import create_client
 from streamlit_navigation_bar import st_navbar
 import pages as pg
-import time
+from datetime import timedelta
+
+
+def apply_offset(row, offset_col, time_col):
+    offset_val = row[offset_col]
+    if pd.isnull(offset_val):
+        return row[time_col]
+    offset_str = str(offset_val)
+    match = None
+    # Accept both "UTC+0530" and "+05:30" formats
+    if offset_str.startswith("UTC"):
+        match = re.match(r"UTC([+-])(\d{2})(\d{2})", offset_str)
+    else:
+        match = re.match(r"([+-])(\d{2}):?(\d{2})", offset_str)
+    if match:
+        sign, hh, mm = match.groups()
+        hours, minutes = int(hh), int(mm)
+        delta = timedelta(hours=hours, minutes=minutes)
+        if sign == "-":
+            delta = -delta
+        return row[time_col] + delta
+    return row[time_col]
 
 # -------------------- Cache -----------------------#
 @st.cache_resource
@@ -102,7 +123,27 @@ def warmup():
             df['jsonPath'] = df[bin_col].apply(lambda x: safe_jsonpath(x, cfg["jsonPath_template"]))
         else:
             df['jsonPath'] = ""
-        
+        # ----------- Apply offset ONCE per metric -----------
+        # Stress
+        if metric == "stress" and "time_offset" in df.columns and "start_time" in df.columns:
+            df["localized_time"] = df.apply(lambda r: apply_offset(r, "time_offset", "start_time"), axis=1)
+            print(df.columns)
+        # Heart Rate
+        elif metric == "hr" and "heart_rate_time_offset" in df.columns and "heart_rate_start_time" in df.columns:
+            df["localized_time"] = df.apply(lambda r: apply_offset(r, "heart_rate_time_offset", "heart_rate_start_time"), axis=1)
+            print(df.columns)
+        # SpO2
+        elif metric == "spo2" and "oxygen_saturation_time_offset" in df.columns and "oxygen_saturation_start_time" in df.columns:
+            df["localized_time"] = df.apply(lambda r: apply_offset(r, "oxygen_saturation_time_offset", "oxygen_saturation_start_time"), axis=1)
+        # Steps
+        elif metric == "steps" and "step_count_time_offset" in df.columns and "step_count_start_time" in df.columns:
+            df["localized_time"] = df.apply(lambda r: apply_offset(r, "step_count_time_offset", "step_count_start_time"), axis=1)
+        # Calorie (if you want to localize, add logic here)
+        elif metric == "calorie" and "calories_burned_day_time" in df.columns:
+            # If you have a time_offset column for calorie, add logic here
+            df["localized_time"] = pd.to_datetime(df["calories_burned_day_time"], errors="coerce")
+        # -----------------------------------------------------
+
         dataframes[metric] = df
     
     return supabase_client, dataframes
@@ -131,7 +172,7 @@ class App:
             for metric in METRICS_CONFIG.keys():
                 st.session_state.setdefault(f"{metric}_date_filter", None)
                 st.session_state.setdefault(f"{metric}_time_filter", datetime.time(0, 0))
-                st.session_state.setdefault(f"df_{metric}_filtered", pd.DataFrame())
+                st.session_state.setdefault(f"df_{metric}_filtered", pd.DataFrame())                
             st.session_state.setdefault("json_cache", {})        # mapping jsonPath -> DataFrame
             st.session_state["initialized"] = True
 
