@@ -24,7 +24,7 @@ def render_metric_tab(tab, metric_name, df, config, supabase_client=None):
             key=f"{metric_name}_date_filter",
             label_visibility="hidden"
         )
-
+        
         if date_filter:
             df_filtered = df[df[config["start_time"]].dt.date == pd.to_datetime(date_filter).date()].copy()
             st.session_state[f"df_{metric_name}_filtered"] = df_filtered
@@ -295,14 +295,16 @@ def cal_tab(tab, metric_name, df, config, supabase_client=None):
             if view_option == "Week View":
                 chart_data = prepare_weekly_data(df, config, selected_metrics)
                 chart,chrtdf = create_weekly_chart(chart_data, config,selected_metrics)
+                summary_label = 'Week'
             else:
                 chart_data = prepare_monthly_data(df, config, selected_metrics)
-                chart = create_monthly_chart(chart_data, selected_metrics)
+                chart,chrtdf = create_monthly_chart(chart_data, config,selected_metrics)
+                summary_label = 'Month'
             
             if chart:
                 colchrt,coldf = st.columns([4,2]) 
                 colchrt.altair_chart(chart, use_container_width=True)
-                with coldf.expander('Week Summary'):
+                with coldf.expander(f'{summary_label} Summary'):
                     st.dataframe(chrtdf.style.format("{:.2f}"))
         
         # Expandable calendar and daily stats
@@ -369,7 +371,6 @@ def prepare_weekly_data(df, config, selected_metrics):
     # Return daily-level data with extra columns
     return df_prepared[['month_start', 'week_start', 'week_number', config['date']] +
                        [name for name, _ in selected_metrics]]
-
 
 def create_weekly_chart(df, config, selected_metrics):
     import altair as alt
@@ -477,56 +478,106 @@ def create_weekly_chart(df, config, selected_metrics):
 
     return chart,summary
 
-
 def prepare_monthly_data(df, config, selected_metrics):
-    """Prepare monthly aggregated data"""
-    df_monthly = df.copy()
-    df_monthly['month'] = df_monthly[config['date']].dt.to_period('M').apply(lambda r: r.start_time)
-    
-    monthly_data = []
-    for month_start in df_monthly['month'].unique():
-        month_data = df_monthly[df_monthly['month'] == month_start]
-        month_record = {'month_start': month_start}
-        
-        for display_name, col_name in selected_metrics:
-            if col_name in month_data.columns:
-                month_record[display_name] = month_data[col_name].sum()
-        
-        monthly_data.append(month_record)
-    
-    return pd.DataFrame(monthly_data)
+    """
+    Prepare daily data for monthly charting.
+    Adds:
+    - month_start (first day of month)
+    - Renames metric columns for display
+    """
+    df_prepared = df.copy()
+    df_prepared[config['date']] = pd.to_datetime(df_prepared[config['date']])
 
-def create_monthly_chart(df, selected_metrics):
-    """Create interactive monthly chart"""
+    # Month info
+    df_prepared['month_start'] = df_prepared[config['date']].dt.to_period('M').apply(lambda r: r.start_time)
+
+    # Rename metric columns for display
+    for display_name, col_name in selected_metrics:
+        if col_name in df_prepared.columns:
+            df_prepared[display_name] = df_prepared[col_name]
+
+    # Return daily-level data with month column
+    return df_prepared[['month_start', config['date']] + [name for name, _ in selected_metrics]]
+
+def create_monthly_chart(df, config, selected_metrics):
+    import altair as alt
+    import pandas as pd
+    import streamlit as st
+
     if df.empty:
+        st.info("No data available")
         return None
-    
+
+    # Ensure datetime
+    df[config['date']] = pd.to_datetime(df[config['date']])
+    if 'month_start' not in df.columns:
+        df['month_start'] = df[config['date']].dt.to_period('M').apply(lambda r: r.start_time)
+
+    # --- Initialize session state ---
+    if 'current_month_idx' not in st.session_state:
+        st.session_state.current_month_idx = 0
+
+    unique_months = sorted(df['month_start'].unique())
+    current_month_idx = st.session_state.current_month_idx
+    current_month = unique_months[current_month_idx]
+
+    # --- Month Navigation ---
+    col1, col2, col3 = st.columns([1, 2, 1], gap='small')
+    with col1:
+        if st.button("⬅️ Prev Month", use_container_width=True) and current_month_idx > 0:
+            st.session_state.current_month_idx -= 1
+    with col2:
+        st.button(f"{current_month.strftime('%B %Y')}", use_container_width=True)
+    with col3:
+        if st.button("Next Month ➡️", use_container_width=True) and current_month_idx < len(unique_months) - 1:
+            st.session_state.current_month_idx += 1
+
+    # Filter data for current month
+    month_data = df[df['month_start'] == current_month]
+    if month_data.empty:
+        st.warning("No data for selected month")
+        return None
+
+    month_start = month_data[config['date']].min()
+    month_end = month_data[config['date']].max()
+    st.markdown(f"### {current_month.strftime('%B %Y')} ({month_start.strftime('%b %d')} - {month_end.strftime('%b %d')})")
+
+    # --- Metric Selection ---
+    metrics_display = [name for name, _ in selected_metrics]
+    selected_metrics_ui = st.multiselect("Select Metrics to Show", metrics_display, default=metrics_display)
+
     # Melt data for Altair
-    melted_data = df.melt(id_vars=['month_start'], 
-                         value_vars=[name for name, _ in selected_metrics],
-                         var_name='metric', value_name='calories')
-    
-    # Color scheme
-    colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FECA57', '#FF9FF3', '#54A0FF']
-    
-    # Create bar chart with pattern
-    chart = alt.Chart(melted_data).mark_bar(
-        cornerRadiusTopLeft=5,
-        cornerRadiusTopRight=5,
-        opacity=0.8
-    ).encode(
-        x=alt.X('month_start:T', title='Month', axis=alt.Axis(format='%b %Y')),
-        y=alt.Y('calories:Q', title='Calories'),
-        color=alt.Color('metric:N', 
-                       scale=alt.Scale(range=colors), 
-                       legend=alt.Legend(title="Metric")),
-        tooltip=['month_start', 'metric', 'calories']
-    ).properties(
-        height=400,
-        title='Monthly Calorie Summary'
-    ).interactive()
-    
-    return chart
+    melted_data = month_data.melt(
+        id_vars=[config['date']],
+        value_vars=selected_metrics_ui,
+        var_name='metric',
+        value_name='value'
+    )
+
+    # Fixed color mapping
+    colors = ['#FF6B6B', '#4ECDC4', '#45B7D1',
+              '#96CEB4', '#FECA57', '#FF9FF3', '#54A0FF']
+    color_scale = alt.Scale(domain=metrics_display, range=colors[:len(metrics_display)])
+
+    # --- Altair Chart ---
+    chart = (
+        alt.Chart(melted_data)
+        .mark_line(point=alt.OverlayMarkDef(size=60, filled=True))
+        .encode(
+            x=alt.X(f"{config['date']}:T", title="Day", axis=alt.Axis(format="%d")),
+            y=alt.Y("value:Q", title="Value"),
+            color=alt.Color("metric:N", scale=color_scale, legend=alt.Legend(title="Metric")),
+            tooltip=[config['date'], "metric", "value"]
+        )
+        .properties(height=400, title="Monthly Metrics Trend")
+        .interactive()
+    )
+
+    # --- Summary Stats ---
+    summary = month_data[selected_metrics_ui].agg(['sum', 'mean', 'max']).T
+    summary.columns = ['Total', 'Average', 'Max']
+
+    return chart, summary
 
 def display_daily_stats(daily_data, config, selected_date):
     """Display daily statistics in metric cards"""
