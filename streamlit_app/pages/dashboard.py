@@ -56,7 +56,6 @@ def render_metric_tab(tab, metric_name, df, config, supabase_client=None):
             f"{config.get('daily_icon','📆')} {config['title']} over Time",
             chart_type=chart_type_map.get(metric_name, "line")
         )
-        print(df_filtered.head(5))
         st.altair_chart(chart_daily, use_container_width=True)
 
         # ----------  Adv Chart ----------
@@ -955,23 +954,6 @@ def chartTimeData(df_og,xval,yval,xtitle,ytitle,chart_title,chart_type="line"):
     ).configure_title(fontSize=14, anchor="start").interactive()
 
     return chart
-
-# def apply_offset(row,offset_col,time_col):
-#     ## extract offset from the offset feature
-#     offset_val = row[offset_col]
-#     if pd.isnull(offset_val):
-#         return row[offset_col]
-#     offset_str = str(offset_val)
-#     match = re.match(r"UTC([+-])(\d{2})(\d{2})",offset_str)
-#     if match:
-#         sign,hh,mm = match.groups()
-#         hours,minutes = int(hh),int(mm)
-#         delta = timedelta(hours=hours,minutes=minutes)
-#         if sign == "-":
-#             delta = -delta
-#         ## shift time
-#         return row[time_col]+delta
-#     return row[time_col]
 
 def loadBinningjsons(offset_col,jsonfilepath,supabase):    
     bucket_name = "json-bucket"

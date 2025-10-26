@@ -14,7 +14,7 @@ from backend.services.datasetFiltering import savebackups, findnewfiles
 from backend.services.datasetExploration import save_feat
 from connectNsyncDB import run_etl
 from dbCount import getEntryCount
-from jsonUploads import run_json_sync
+from database.BucketsUploads import run_json_sync,run_healthsync_sync
 # ---------------------- LOGGING SETUP ----------------------- #
 LOG_DIR = "logs"
 LOG_FILE = os.path.join(LOG_DIR, "etl.log")
@@ -135,12 +135,15 @@ def run_flow():
         load_dotenv(override=True)
         data_path = os.getenv("DATA_PATH")
         json_path = os.getenv("JSON_PATH")
+        healthsync_path = os.getenv("HEALTHSYNC_PATH")
         if not data_path:
             logging.error("DATA_PATH not set in .env")
             return
         if not json_path:
             logging.error("JSON_PATH not set in .env")
             return
+        if not healthsync_path:
+            logging.error("HEALTHSYNC_PATH not set in .env")            
         ## connect the DB, 2 options -> local OR supabase
         conn = get_connection("supabase")        
         ## run scripts
@@ -149,6 +152,7 @@ def run_flow():
         save_feat(data_path)
         run_etl(data_path,conn)
         run_json_sync(json_path)
+        run_healthsync_sync(healthsync_path)
         getEntryCount(TABLE_NAMES_JSON,conn)
 
         # closing the connection of DB
