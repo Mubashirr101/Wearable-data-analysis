@@ -184,6 +184,7 @@ def run_etl(data_folder,conn):
             uniqueKey = create_table(cursor,cleaned_tbl_name,df)
             try:
                 insert_data(cursor, cleaned_tbl_name, df, uniqueKey)
+                print(f"[INSERTED]: Table '{cleaned_tbl_name}' inserted successfully.")                
             except Exception as insert_err:
                 print(f"[ERROR] Bulk insert failed: {insert_err}")
                 print("[INFO] Attempting row-by-row insert to find problem row...")  # 

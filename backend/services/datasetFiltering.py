@@ -28,9 +28,9 @@ def normalise_filenames(non_normalised_files):
             filelist.append(remove_timestamp(csv))        
         norm_backup_csv[backups] = filelist
     # Listing total files in norm_backup_csv (norm), it matches the no. of files in backup_files (non norm)
-    # print("\n============= NORMALISED: No. of CSV files in each Backup: =============\n")
-    # for i in norm_backup_csv:
-    #     print(f"\t{i}:{len(norm_backup_csv[i])}")
+    print("\n============= NORMALISED: No. of CSV files in each Backup: =============\n")
+    for i in norm_backup_csv:
+        print(f"\t{i}:{len(norm_backup_csv[i])}")
     return norm_backup_csv
 
 # saving names of all the backups and the respective csv files in them in a json file
@@ -45,9 +45,9 @@ def savebackups(main_folder_path):
                     filelist.append(file)
             backup_files[backups] = filelist
     # Checking number of files in each backup
-    # print("\n============= RAW: Number of CSV files in each Backup: =============\n")
-    # for i in backup_files:
-    #     print(f"\t{i} : {len(backup_files[i])}")
+    print("\n============= RAW: Number of CSV files in each Backup: =============\n")
+    for i in backup_files:
+        print(f"\t{i} : {len(backup_files[i])}")
 
     # normalizing file names (removing timestamps) across the different backup versions
     normalisedFilelist = normalise_filenames(backup_files)
@@ -68,7 +68,8 @@ def findnewfiles(filenamesPATH):
         for files in sorted(normalised_files[backups]):
             if files not in seen_files:
                 new_files.append(files)
-                seen_files.add(files)        
+                seen_files.add(files)   
+                print(f"[NEW FILE]: {files}")                     
         # per folder index dict
         file_dict = {}
         for index,file in enumerate(new_files,start=1):

@@ -27,7 +27,7 @@ def getEntryCount(tableNamesListPATH,conn):
         try:
             cursor.execute(sql.SQL("SELECT COUNT(*)FROM {}").format(sql.Identifier(table)))
             count = cursor.fetchone()[0]
-            # print(f"Table: {table} has {count} rows.")
+            print(f"Table: {table} has {count} rows.")
             rowcountDict[table] = count
         except Exception as e:
             rowcountDict[table] = f"Error: {str(e)}"
