@@ -4,10 +4,39 @@ import sys
 import logging
 from dotenv import load_dotenv
 import psycopg2
+from datetime import datetime
 # ---------------------- PATH SETUP -------------------------- #
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 PARENT_DIR = os.path.dirname(CURRENT_DIR)
 sys.path.append(PARENT_DIR)
+
+# ---------------------- LOGGING SETUP ----------------------- #
+LOG_DIR = "logs"
+timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+LOG_FILE = os.path.join(LOG_DIR, f"etl_{timestamp}.log")
+
+
+os.makedirs(LOG_DIR, exist_ok=True)
+
+# Create logger
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
+# Formatter
+formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s", "%Y-%m-%d %H:%M:%S")
+
+# File handler
+file_handler = logging.FileHandler(LOG_FILE, mode="a", encoding="utf-8")
+file_handler.setFormatter(formatter)
+logger.addHandler(file_handler)
+
+# Console handler
+console_handler = logging.StreamHandler(sys.stdout)
+console_handler.setFormatter(formatter)
+logger.addHandler(console_handler)
+
+# Redirect print() → logging.info()
+print = lambda *args, **kwargs: logger.info(" ".join(str(a) for a in args))
 
 # ---------------------- IMPORTING MODULES ----------------------------- #
 from backend.services.datasetFiltering import savebackups, findnewfiles
@@ -15,24 +44,6 @@ from backend.services.datasetExploration import save_feat
 from connectNsyncDB import run_etl
 from dbCount import getEntryCount
 from database.BucketsUploads import run_json_sync,run_healthsync_sync
-# ---------------------- LOGGING SETUP ----------------------- #
-LOG_DIR = "logs"
-LOG_FILE = os.path.join(LOG_DIR, "etl.log")
-
-os.makedirs(LOG_DIR, exist_ok=True)
-
-logging.basicConfig(
-    filename=LOG_FILE,
-    filemode="a",
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-    level=logging.INFO
-)
-
-# Also log to console
-console_handler = logging.StreamHandler()
-console_handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s"))
-logging.getLogger().addHandler(console_handler)
 
 # ---------------------- LOAD ENV ---------------------------- #
 load_dotenv()
