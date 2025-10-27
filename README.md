@@ -2,7 +2,12 @@
 
 A comprehensive fitness analytics platform that aggregates health data from multiple sources, processes it with machine learning, and delivers personalized insights through an interactive web dashboard and AI coaching assistant.
 
-![Project Lifecycle](LifeCycle.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="img/LifeCycle_dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="img/LifeCycle_light.png">
+  <img alt="LifeCycle Diagram" src="img/LifeCycle_light.png" width="600">
+</picture>
+
 
 ## 🌟 Overview
 
@@ -161,4 +166,5 @@ This project is licensed under the GNU General Public License v3.0 - see the [LI
 ---
 
 **Note**: This application is designed for personal fitness tracking and should not be used for medical diagnosis. Always consult healthcare professionals for medical advice.
+
 
