@@ -12,19 +12,24 @@ from branca.element import Template, MacroElement
 from jinja2 import Template
 import hashlib
 from datetime import datetime
-# Initialize session state for map persistence
-if 'map_center' not in st.session_state:
-    st.session_state.map_center = None
-if 'map_zoom' not in st.session_state:
-    st.session_state.map_zoom = None
-if 'map_user_interacted' not in st.session_state:
-    st.session_state.map_user_interacted = False
-if 'activity_df' not in st.session_state:
-    st.session_state.activity_df = None
-if 'current_file_hash' not in st.session_state:
-    st.session_state.current_file_hash = None
+import io
+from xml.etree import ElementTree as ET
+import time
+from httpx import RemoteProtocolError, ReadTimeout, ConnectError
 
 def show_activity(supabase_client):
+    # Initialize session state for map persistence
+    if 'map_center' not in st.session_state:
+        st.session_state.map_center = None
+    if 'map_zoom' not in st.session_state:
+        st.session_state.map_zoom = None
+    if 'map_user_interacted' not in st.session_state:
+        st.session_state.map_user_interacted = False
+    if 'activity_df' not in st.session_state:
+        st.session_state.activity_df = None
+    if 'current_file_hash' not in st.session_state:
+        st.session_state.current_file_hash = None
+
     tab1, tab2 = st.tabs(['Indoor Activities 🏋🏻‍♂️', 'Outdoor Activities 👟'])
     
     with tab1:
@@ -50,9 +55,11 @@ def show_activity(supabase_client):
         # Parsing Functions (with caching)
         # -------------------
         @st.cache_data
-        def parse_fit(file) -> pd.DataFrame:
+        def parse_fit(file_data) -> pd.DataFrame:
             try:
-                fitfile = FitFile(file)
+                # Convert bytes to file-like object
+                file_obj = io.BytesIO(file_data)
+                fitfile = FitFile(file_obj)
                 records = []
                 for record in fitfile.get_messages("record"):
                     rec_data = {}
@@ -70,9 +77,11 @@ def show_activity(supabase_client):
                 return pd.DataFrame()
 
         @st.cache_data
-        def parse_gpx(file) -> pd.DataFrame:
+        def parse_gpx(file_data) -> pd.DataFrame:
             try:
-                gpx = gpxpy.parse(file)
+                # Convert bytes to string for gpxpy
+                file_content = file_data.decode('utf-8')
+                gpx = gpxpy.parse(file_content)
                 records = []
                 for track in gpx.tracks:
                     for segment in track.segments:
@@ -86,6 +95,105 @@ def show_activity(supabase_client):
                 return pd.DataFrame(records)
             except Exception as e:
                 st.error(f"Error parsing GPX file: {str(e)}")
+                return pd.DataFrame()
+
+        @st.cache_data
+        def parse_kml(file_data) -> pd.DataFrame:
+            try:
+                # Convert bytes to string and parse XML
+                file_content = file_data.decode('utf-8')
+                root = ET.fromstring(file_content)
+                
+                # Namespace handling for KML
+                ns = {'kml': 'http://www.opengis.net/kml/2.2'}
+                
+                records = []
+                
+                # Find all Placemark elements with LineString (the actual route)
+                for placemark in root.findall('.//kml:Placemark', ns):
+                    # Look for LineString coordinates (the route)
+                    linestring = placemark.find('.//kml:LineString', ns)
+                    if linestring is not None:
+                        coords_elem = linestring.find('.//kml:coordinates', ns)
+                        if coords_elem is not None and coords_elem.text:
+                            # Split coordinates by whitespace and newlines
+                            coords_list = coords_elem.text.strip().split()
+                            for coord in coords_list:
+                                # Handle coordinates format: lon,lat[,elevation]
+                                parts = coord.split(',')
+                                if len(parts) >= 2:
+                                    lon, lat = float(parts[0]), float(parts[1])
+                                    elevation = float(parts[2]) if len(parts) > 2 else 0
+                                    records.append({
+                                        "lat": lat,
+                                        "lon": lon,
+                                        "elevation": elevation
+                                    })
+                
+                # If no LineString found, look for any coordinates in the file
+                if not records:
+                    for coords_elem in root.findall('.//kml:coordinates', ns):
+                        if coords_elem.text:
+                            coords_list = coords_elem.text.strip().split()
+                            for coord in coords_list:
+                                parts = coord.split(',')
+                                if len(parts) >= 2:
+                                    lon, lat = float(parts[0]), float(parts[1])
+                                    elevation = float(parts[2]) if len(parts) > 2 else 0
+                                    records.append({
+                                        "lat": lat,
+                                        "lon": lon,
+                                        "elevation": elevation
+                                    })
+                
+                return pd.DataFrame(records)
+            except Exception as e:
+                st.error(f"Error parsing KML file: {str(e)}")
+                st.error(f"KML content: {file_data[:500]}...")  # Show first 500 chars for debugging
+                return pd.DataFrame()
+
+        @st.cache_data
+        def parse_tcx(file_data) -> pd.DataFrame:
+            try:
+                # Convert bytes to string and parse XML
+                file_content = file_data.decode('utf-8')
+                root = ET.fromstring(file_content)
+                
+                # Namespace handling for TCX
+                ns = {'ns': 'http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2'}
+                
+                records = []
+                
+                for trackpoint in root.findall('.//ns:Trackpoint', ns):
+                    time_elem = trackpoint.find('ns:Time', ns)
+                    pos_elem = trackpoint.find('ns:Position', ns)
+                    
+                    if pos_elem is not None:
+                        lat_elem = pos_elem.find('ns:LatitudeDegrees', ns)
+                        lon_elem = pos_elem.find('ns:LongitudeDegrees', ns)
+                        
+                        if lat_elem is not None and lon_elem is not None:
+                            record = {
+                                "time": time_elem.text if time_elem is not None else None,
+                                "lat": float(lat_elem.text),
+                                "lon": float(lon_elem.text)
+                            }
+                            
+                            # Get elevation if available
+                            alt_elem = trackpoint.find('ns:AltitudeMeters', ns)
+                            if alt_elem is not None:
+                                record["elevation"] = float(alt_elem.text)
+                            
+                            # Get heart rate if available
+                            hr_elem = trackpoint.find('.//ns:HeartRateBpm/ns:Value', ns)
+                            if hr_elem is not None:
+                                record["heart_rate"] = float(hr_elem.text)
+                            
+                            records.append(record)
+                
+                return pd.DataFrame(records)
+            except Exception as e:
+                st.error(f"Error parsing TCX file: {str(e)}")
                 return pd.DataFrame()
 
         def normalize_data(df: pd.DataFrame) -> pd.DataFrame:
@@ -174,7 +282,7 @@ def show_activity(supabase_client):
                     st.session_state.map_zoom = map_data.get("zoom", 13)
                     st.session_state.map_user_interacted = True
             else:
-                st.warning("DataFrame must have 'lat' and 'lon' columns with at least one row.")
+                st.warning("No valid coordinate data found for mapping.")
 
         def show_charts(df: pd.DataFrame):
             vitals = ["Heart Rate", "Speed", "Cadence", "Elevation", "Distance"]
@@ -187,96 +295,181 @@ def show_activity(supabase_client):
                         .properties(width="container", height=200, title=vital)
                     )
                     st.altair_chart(chart, use_container_width=True)
-
-
-        def loadMapfiles(type,date,supabase):    
+     
+        def loadMapfiles(type, date, file_type, supabase):    
             bucket_name = "healthsync-bucket"
-            date_obj = datetime.strptime(str(date),"%Y-%m-%d")
+            date_obj = datetime.strptime(str(date), "%Y-%m-%d")
             formatted_date = date_obj.strftime("%d.%m.%Y")
             folder_path = 'Health Sync Activities/'
-            # getting a list of all the files
-            # Prepare to collect all files
+
+            # Fetch all files with pagination and retry logic
             all_files = []
             limit = 100
             offset = 0
+            max_pages = 100  # safety limit to avoid infinite loops
+
 
             while True:
-                # Get files in pages of 100
-                files = supabase.storage.from_(bucket_name).list(folder_path, {"limit": limit, "offset": offset})
+                retries = 3
+                for attempt in range(retries):
+                    try:
+                        files = supabase.storage.from_(bucket_name).list(
+                            folder_path,
+                            {"limit": limit, "offset": offset}
+                        )
+                        break  # success → break retry loop
+                    except (RemoteProtocolError, ReadTimeout, ConnectError) as e:
+                        if attempt < retries - 1:
+                            st.warning(f"⚠️ Connection issue (attempt {attempt + 1}/{retries}). Retrying...")
+                            time.sleep(1)
+                        else:
+                            st.error(f"❌ Failed to fetch files after {retries} attempts: {str(e)}")
+                            return []
+                    except Exception as e:
+                        st.error(f"Unexpected error while listing files: {str(e)}")
+                        return []
 
-                # If no files returned, break out of loop
                 if not files:
                     break
 
-                # Add them to our master list
                 all_files.extend(files)
-
-                # Move to next page
                 offset += limit
 
-            # getting all the files macthning the activiy and date
+                # Safety break
+                if offset // limit > max_pages:
+                    st.warning("⚠️ Too many pages of files; stopping early to prevent overload.")
+                    break
+
+            # Filter files by activity type, date, and file type
             matching_files = []
             expected_prefix = f"{type}-{formatted_date}"  
+            file_extension = f".{file_type.lower()}"
+
             for file in all_files:
                 file_name = file['name']
-                # checking if it starts with the needed filetype
-                if file_name.startswith(expected_prefix):
-                    matching_files.append(file_name)   
-                       
-                
-            # res = supabase.storage.from_(bucket_name).download(file_path)
-            
-            return matching_files
+                if (file_name.startswith(expected_prefix) and 
+                    file_name.lower().endswith(file_extension)):
+                    matching_files.append(file_name)
+
+            if not matching_files:
+                return []
+
+            downloaded_files = []
+            for name in matching_files:
+                file_path = folder_path + name
+
+                # Retry download in case of disconnection
+                for attempt in range(retries):
+                    try:
+                        file_data = supabase.storage.from_(bucket_name).download(file_path)
+                        downloaded_files.append({
+                            'name': name,
+                            'data': file_data,
+                            'type': file_type
+                        })
+                        break
+                    except (RemoteProtocolError, ReadTimeout, ConnectError) as e:
+                        if attempt < retries - 1:
+                            st.warning(f"⚠️ Download failed for {name} (attempt {attempt + 1}/{retries}). Retrying...")
+                            time.sleep(1)
+                        else:
+                            st.error(f"❌ Failed to download {name}: {str(e)}")
+                    except Exception as e:
+                        st.error(f"Unexpected error downloading {name}: {str(e)}")
+                        break
+
+            return downloaded_files
+
 
         # -------------------
         # Main App
         # -------------------
-
-        uploaded_file = st.file_uploader(
-            "Upload your activity file", 
-            type=["fit", "gpx", "csv", "json"]
-        )
-
-        outdoor_activity_calender = st.date_input("outdoor_activity_date",key="outdoor_activity_date_filter",label_visibility="hidden")
-        outdoor_activity_type = 'WALKING'
-        mapfiles = loadMapfiles(outdoor_activity_type,outdoor_activity_calender,supabase_client)
-        print(mapfiles)
-
-        # Check if a new file was uploaded
-        current_file_hash = hashlib.md5(uploaded_file.getvalue()).hexdigest() if uploaded_file else None
         
-        # Reset map state only if a new file is uploaded
-        if (uploaded_file is not None and 
-            st.session_state.current_file_hash != current_file_hash):
-            st.session_state.map_center = None
-            st.session_state.map_zoom = None
-            st.session_state.map_user_interacted = False
-            st.session_state.current_file_hash = current_file_hash
-
-        # Process uploaded file or use existing data
-        if uploaded_file is not None:
-            if uploaded_file.name.endswith(".fit"):
-                df = parse_fit(uploaded_file)
-            elif uploaded_file.name.endswith(".gpx"):
-                df = parse_gpx(uploaded_file)
-            elif uploaded_file.name.endswith(".csv"):
-                df = pd.read_csv(uploaded_file)
-            elif uploaded_file.name.endswith(".json"):
-                df = pd.read_json(uploaded_file)
+        # Create two columns for date and file type selection
+        col_date, col_type = st.columns(2)
+        
+        with col_date:
+            outdoor_activity_calender = st.date_input(
+                "Select Activity Date", 
+                key="outdoor_activity_date_filter"
+            )
+        
+        with col_type:
+            # File type dropdown
+            file_type_options = ["FIT", "GPX", "KML", "TCX"]
+            outdoor_activity_file_type = st.selectbox(
+                "Select File Type",
+                options=file_type_options,
+                key="outdoor_activity_file_type"
+            )
+        
+        outdoor_activity_type = 'WALKING'
+        
+        # Load files based on selected date and file type
+        if outdoor_activity_calender:
+            mapfiles = loadMapfiles(
+                outdoor_activity_type, 
+                outdoor_activity_calender, 
+                outdoor_activity_file_type, 
+                supabase_client
+            )
+            
+            if mapfiles:
+                st.success(f"Found {len(mapfiles)} {outdoor_activity_file_type} file(s) for {outdoor_activity_calender}")
+                
+                # If multiple files found, let user choose which one to display
+                selected_file = None
+                if len(mapfiles) > 1:
+                    file_options = [f["name"] for f in mapfiles]
+                    selected_file_name = st.selectbox(
+                        "Select specific file to display:",
+                        options=file_options,
+                        key="file_selector"
+                    )
+                    selected_file = next((f for f in mapfiles if f["name"] == selected_file_name), None)
+                else:
+                    selected_file = mapfiles[0]
+                
+                if selected_file:
+                    # Parse the selected file based on its type
+                    file_data = selected_file['data']
+                    file_type = selected_file['type']
+                    
+                    # Create a hash of the file data to track changes
+                    current_file_hash = hashlib.md5(file_data).hexdigest()
+                    
+                    # Reset map state only if a new file is selected
+                    if st.session_state.get('current_file_hash') != current_file_hash:
+                        st.session_state.map_center = None
+                        st.session_state.map_zoom = None
+                        st.session_state.map_user_interacted = False
+                        st.session_state.current_file_hash = current_file_hash
+                    
+                    # Parse file based on type
+                    df = None
+                    if file_type == "FIT":
+                        df = parse_fit(file_data)
+                    elif file_type == "GPX":
+                        df = parse_gpx(file_data)
+                    elif file_type == "KML":
+                        df = parse_kml(file_data)
+                    elif file_type == "TCX":
+                        df = parse_tcx(file_data)
+                    
+                    if df is not None and not df.empty:
+                        df = normalize_data(df)
+                        st.session_state.activity_df = df
+                        
+                        # Display success message
+                        st.success(f"Successfully parsed {len(df)} data points from {selected_file['name']}")
+                    else:
+                        st.error(f"Failed to process the {file_type} file or file is empty")
             else:
-                st.error("Unsupported file format")
+                st.warning(f"No {outdoor_activity_file_type} files found for {outdoor_activity_calender}")
                 df = None
-
-            if df is not None and not df.empty:
-                df = normalize_data(df)
-                st.session_state.activity_df = df
-            else:
-                st.error("Failed to process the file or file is empty")
-        elif st.session_state.get("activity_df") is not None:
-            df = st.session_state.activity_df
         else:
             df = None
-            st.info("👆 Please upload a FIT or GPX file to get started")
+            st.info("👆 Please select a date and file type to load activity data")
 
         # Display the map and charts if we have data
         if df is not None and not df.empty:                
@@ -290,7 +483,5 @@ def show_activity(supabase_client):
                 st.subheader("📊 Activity Vitals")
                 show_charts(df)
 
-            st.success(f"Loaded {len(df)} records ✅")
             with st.expander("View raw data"):
                 st.dataframe(df.head())
-
