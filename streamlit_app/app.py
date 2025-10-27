@@ -127,11 +127,9 @@ def warmup():
         # Stress
         if metric == "stress" and "time_offset" in df.columns and "start_time" in df.columns:
             df["localized_time"] = df.apply(lambda r: apply_offset(r, "time_offset", "start_time"), axis=1)
-            print(df.columns)
         # Heart Rate
         elif metric == "hr" and "heart_rate_time_offset" in df.columns and "heart_rate_start_time" in df.columns:
             df["localized_time"] = df.apply(lambda r: apply_offset(r, "heart_rate_time_offset", "heart_rate_start_time"), axis=1)
-            print(df.columns)
         # SpO2
         elif metric == "spo2" and "oxygen_saturation_time_offset" in df.columns and "oxygen_saturation_start_time" in df.columns:
             df["localized_time"] = df.apply(lambda r: apply_offset(r, "oxygen_saturation_time_offset", "oxygen_saturation_start_time"), axis=1)
@@ -196,7 +194,9 @@ class App:
                 self.dataframes.get("calorie"),
                 self.supabase_client
             ),
-            'Activity': pg.show_activity,
+            'Activity': lambda: pg.show_activity(
+                self.supabase_client
+            ),
             'Coach': pg.show_coach,
             'More': pg.show_more,
         }

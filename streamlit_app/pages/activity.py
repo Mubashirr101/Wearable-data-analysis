@@ -11,7 +11,7 @@ from math import radians, sin, cos, sqrt, atan2
 from branca.element import Template, MacroElement
 from jinja2 import Template
 import hashlib
-
+from datetime import datetime
 # Initialize session state for map persistence
 if 'map_center' not in st.session_state:
     st.session_state.map_center = None
@@ -24,9 +24,8 @@ if 'activity_df' not in st.session_state:
 if 'current_file_hash' not in st.session_state:
     st.session_state.current_file_hash = None
 
-def show_activity():
-    st.header('Activity')
-    tab1, tab2 = st.tabs(['Workout', 'Running Route'])
+def show_activity(supabase_client):
+    tab1, tab2 = st.tabs(['Indoor Activities 🏋🏻‍♂️', 'Outdoor Activities 👟'])
     
     with tab1:
         st.write('exercises')
@@ -189,13 +188,59 @@ def show_activity():
                     )
                     st.altair_chart(chart, use_container_width=True)
 
+
+        def loadMapfiles(type,date,supabase):    
+            bucket_name = "healthsync-bucket"
+            date_obj = datetime.strptime(str(date),"%Y-%m-%d")
+            formatted_date = date_obj.strftime("%d.%m.%Y")
+            folder_path = 'Health Sync Activities/'
+            # getting a list of all the files
+            # Prepare to collect all files
+            all_files = []
+            limit = 100
+            offset = 0
+
+            while True:
+                # Get files in pages of 100
+                files = supabase.storage.from_(bucket_name).list(folder_path, {"limit": limit, "offset": offset})
+
+                # If no files returned, break out of loop
+                if not files:
+                    break
+
+                # Add them to our master list
+                all_files.extend(files)
+
+                # Move to next page
+                offset += limit
+
+            # getting all the files macthning the activiy and date
+            matching_files = []
+            expected_prefix = f"{type}-{formatted_date}"  
+            for file in all_files:
+                file_name = file['name']
+                # checking if it starts with the needed filetype
+                if file_name.startswith(expected_prefix):
+                    matching_files.append(file_name)   
+                       
+                
+            # res = supabase.storage.from_(bucket_name).download(file_path)
+            
+            return matching_files
+
         # -------------------
         # Main App
         # -------------------
+
         uploaded_file = st.file_uploader(
             "Upload your activity file", 
             type=["fit", "gpx", "csv", "json"]
         )
+
+        outdoor_activity_calender = st.date_input("outdoor_activity_date",key="outdoor_activity_date_filter",label_visibility="hidden")
+        outdoor_activity_type = 'WALKING'
+        mapfiles = loadMapfiles(outdoor_activity_type,outdoor_activity_calender,supabase_client)
+        print(mapfiles)
 
         # Check if a new file was uploaded
         current_file_hash = hashlib.md5(uploaded_file.getvalue()).hexdigest() if uploaded_file else None
@@ -227,7 +272,7 @@ def show_activity():
                 st.session_state.activity_df = df
             else:
                 st.error("Failed to process the file or file is empty")
-        elif st.session_state.activity_df is not None:
+        elif st.session_state.get("activity_df") is not None:
             df = st.session_state.activity_df
         else:
             df = None
