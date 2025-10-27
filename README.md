@@ -149,7 +149,7 @@ METRICS_CONFIG = {
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
 
 ## 🙏 Acknowledgments
 
@@ -161,3 +161,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ---
 
 **Note**: This application is designed for personal fitness tracking and should not be used for medical diagnosis. Always consult healthcare professionals for medical advice.
+
