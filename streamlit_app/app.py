@@ -96,8 +96,18 @@ METRICS_CONFIG = {
     },
     "exercise":{
         "table":"exercise",
-        "columns": ["exercise_start_time","live_data_internal","routine_datauuid","exercise_duration","exercise_exercise_type","exercise_time_offset","exercise_live_data",],
+        "columns": ["exercise_start_time","live_data_internal","routine_datauuid","custom_id","exercise_duration","activity_type","exercise_time_offset","exercise_live_data"],
         "jsonPath_template": "com.samsung.shealth.exercise/{0}/{1}",        
+    },
+    "exercise_routine":{
+        "table":"exercise_routine",
+        "columns":["datauuid","custom_id","total_calorie","activities"],
+        "jsonPath_template": "com.samsung.shealth.exercise.routine/{0}/{1}",        
+    },
+    "custom_exercise":{
+        "table":"exercise_custom_exercise",
+        "columns":["custom_name","datauuid","custom_id","custom_type","preference"],
+        "jsonPath_template": "com.samsung.shealth.exercise.custom_exercise/{0}/{1}",                
     }
 }
 
@@ -128,10 +138,22 @@ def warmup():
                 bin_col1 = 'exercise_live_data'
                 bin_col2 = 'live_data_internal'
                 df['jsonPath_LiveData'] = df[bin_col1].apply(lambda x: safe_jsonpath(x, cfg["jsonPath_template"]))
-                df['jsonPath_LiveInternal'] = df[bin_col2].apply(lambda x: safe_jsonpath(x, cfg["jsonPath_template"]))
+                df['jsonPath_LiveInternal'] = df[bin_col2].apply(lambda x: safe_jsonpath(x, cfg["jsonPath_template"]))            
             else:
                 df['jsonPath_LiveData'] = ""
                 df['jsonPath_LiveInternal'] = ""
+        elif metric == 'exercise_routine':
+            if cfg["jsonPath_template"]:
+                bin_col1 = 'activities'
+                df['jsonPath_activities'] = df[bin_col1].apply(lambda x: safe_jsonpath(x, cfg["jsonPath_template"]))
+            else:
+                df['jsonPath_activities'] = ""
+        elif metric == 'custom_exercise':
+            if cfg["jsonPath_template"]:
+                bin_col1 = 'preference'
+                df['jsonPath_preference'] = df[bin_col1].apply(lambda x: safe_jsonpath(x, cfg["jsonPath_template"]))
+            else:
+                df['jsonPath_preference'] = ""                
         else:
             if cfg["jsonPath_template"]:
                 bin_col = df.columns[-1]  # assume last column is the binning column
@@ -214,6 +236,8 @@ class App:
             ),
             'Activity': lambda: pg.show_activity(
                 self.dataframes.get("exercise"),
+                self.dataframes.get("exercise_routine"),
+                self.dataframes.get("custom_exercise"),
                 self.supabase_client
             ),
             'Coach': pg.show_coach,
