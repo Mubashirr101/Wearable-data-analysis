@@ -94,6 +94,11 @@ METRICS_CONFIG = {
         "columns": ["calories_burned_day_time","calories_burned_create_time","active_calories_goal","total_exercise_calories","calories_burned_tef_calorie","calories_burned_active_time","calories_burned_rest_calorie","calories_burned_active_calorie", "extra_data"],
         "jsonPath_template": "com.samsung.shealth.calories_burned.details/{0}/{1}",
     },
+    "exercise":{
+        "table":"exercise",
+        "columns": ["exercise_start_time","live_data_internal","routine_datauuid","exercise_duration","exercise_exercise_type","exercise_time_offset","exercise_live_data",],
+        "jsonPath_template": "com.samsung.shealth.exercise/{0}/{1}",        
+    }
 }
 
 # -------------------- Warmup --------------------#
@@ -118,11 +123,22 @@ def warmup():
         df = querySupabase(engine, cfg["table"], cfg["columns"])
         
         # Add jsonPath column if template exists
-        if cfg["jsonPath_template"]:
-            bin_col = df.columns[-1]  # assume last column is the binning column
-            df['jsonPath'] = df[bin_col].apply(lambda x: safe_jsonpath(x, cfg["jsonPath_template"]))
+        if metric == 'exercise':
+            if cfg["jsonPath_template"]:
+                bin_col1 = 'exercise_live_data'
+                bin_col2 = 'live_data_internal'
+                df['jsonPath_LiveData'] = df[bin_col1].apply(lambda x: safe_jsonpath(x, cfg["jsonPath_template"]))
+                df['jsonPath_LiveInternal'] = df[bin_col2].apply(lambda x: safe_jsonpath(x, cfg["jsonPath_template"]))
+            else:
+                df['jsonPath_LiveData'] = ""
+                df['jsonPath_LiveInternal'] = ""
         else:
-            df['jsonPath'] = ""
+            if cfg["jsonPath_template"]:
+                bin_col = df.columns[-1]  # assume last column is the binning column
+                df['jsonPath'] = df[bin_col].apply(lambda x: safe_jsonpath(x, cfg["jsonPath_template"]))
+            else:
+                df['jsonPath'] = ""
+
         # ----------- Apply offset ONCE per metric -----------
         # Stress
         if metric == "stress" and "time_offset" in df.columns and "start_time" in df.columns:
@@ -136,10 +152,12 @@ def warmup():
         # Steps
         elif metric == "steps" and "step_count_time_offset" in df.columns and "step_count_start_time" in df.columns:
             df["localized_time"] = df.apply(lambda r: apply_offset(r, "step_count_time_offset", "step_count_start_time"), axis=1)
-        # Calorie (if you want to localize, add logic here)
+        # Calorie 
         elif metric == "calorie" and "calories_burned_day_time" in df.columns:
-            # If you have a time_offset column for calorie, add logic here
             df["localized_time"] = pd.to_datetime(df["calories_burned_day_time"], errors="coerce")
+        # Exercise
+        elif metric == "exercise" and "exercise_time_offset" in df.columns and "exercise_start_time" in df.columns:
+            df["localized_time"] = df.apply(lambda r: apply_offset(r, "exercise_time_offset", "exercise_start_time"), axis=1)
         # -----------------------------------------------------
 
         dataframes[metric] = df
@@ -195,6 +213,7 @@ class App:
                 self.supabase_client
             ),
             'Activity': lambda: pg.show_activity(
+                self.dataframes.get("exercise"),
                 self.supabase_client
             ),
             'Coach': pg.show_coach,

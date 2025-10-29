@@ -17,7 +17,7 @@ from xml.etree import ElementTree as ET
 import time
 from httpx import RemoteProtocolError, ReadTimeout, ConnectError
 
-def show_activity(supabase_client):
+def show_activity(df_exercise,supabase_client):
     # Initialize session state for map persistence
     if 'map_center' not in st.session_state:
         st.session_state.map_center = None
@@ -34,6 +34,63 @@ def show_activity(supabase_client):
     
     with tab1:
         st.write('exercises')
+        with tab1:
+            st.subheader("🏋🏻 Indoor Exercise Dashboard")
+
+            # Date selector
+            selected_date = st.date_input("Select a Date to View Exercises", key="indoor_activity_date")          
+
+            # Filter by selected date
+            if selected_date:
+                daily_exercises = df_exercise[df_exercise["localized_time"].dt.date == pd.to_datetime(selected_date).date()]
+                if daily_exercises.empty:
+                    st.warning(f"No exercise sessions found for {selected_date}.")
+                else:
+                    for i, row in daily_exercises.iterrows():
+                        st.markdown("---")
+                        st.markdown(f"### 🏋️ {row.get('exercise_type', 'Unknown Activity')}")
+
+                #         # Duration and stats
+                #         col1, col2, col3 = st.columns(3)
+                #         with col1:
+                #             st.metric("Duration (min)", round(row.get("duration", 0) / 60, 1))
+                #         with col2:
+                #             st.metric("Calories Burned", row.get("calories", "N/A"))
+                #         with col3:
+                #             st.metric("Distance (km)", round(row.get("distance", 0) / 1000, 2))
+
+                #         # Link to routine/custom exercise if available
+                #         custom_info = custom_df[custom_df["id"] == row.get("custom_exercise_id")] if "id" in custom_df.columns else None
+                #         if custom_info is not None and not custom_info.empty:
+                #             st.write(f"**Custom Exercise:** {custom_info.iloc[0].get('name', 'Unnamed')}")
+                #         routine_info = routine_df[routine_df["id"] == row.get("routine_id")] if "id" in routine_df.columns else None
+                #         if routine_info is not None and not routine_info.empty:
+                #             st.write(f"**Routine:** {routine_info.iloc[0].get('name', 'Unnamed')}")
+
+                #         # Recovery HR
+                #         recovery_info = recovery_df[recovery_df["exercise_id"] == row.get("id")] if "id" in recovery_df.columns else None
+                #         if recovery_info is not None and not recovery_info.empty:
+                #             st.metric("Recovery Heart Rate", recovery_info.iloc[0].get("recovery_heart_rate", "N/A"))
+
+                #         # Load and display vitals (from JSONs)
+                #         import json
+                #         try:
+                #             with open("/mnt/data/47bafabf-51bb-4f50-87bc-101692d93dee.com.samsung.health.exercise.live_data.json") as f:
+                #                 live_data = json.load(f)
+                #             with open("/mnt/data/47bafabf-51bb-4f50-87bc-101692d93dee.sensing_status.json") as f:
+                #                 sensing = json.load(f)
+
+                #             hr_values = [d.get("heart_rate") for d in live_data if "heart_rate" in d]
+                #             if hr_values:
+                #                 st.line_chart(pd.Series(hr_values, name="Heart Rate"))
+                #             st.write(f"**Sampling Rate:** {sensing.get('sampling_rate', 'N/A')} ms")
+                #             st.write(f"**Max HR:** {sensing['heart_rate'].get('max_hr_auto', 'N/A')}")
+                #         except Exception as e:
+                #             st.warning(f"Could not load HR/vitals data: {e}")
+
+            else:
+                st.info("👆 Select a date to view indoor exercise sessions.")
+
     
     with tab2:       
         # -------------------
