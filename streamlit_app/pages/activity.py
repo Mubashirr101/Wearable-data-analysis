@@ -114,43 +114,94 @@ def show_activity(df_exercise,df_exercise_routine,df_custom_exercise,df_inbuilt_
 
                 ## Workout flow (warmups n cooldowns in separate blocks, breaks in small gaps between exercises
                 with st.expander(f"Workout Routine:"):
-                    activity_count = 0
                     st.markdown(f"#### {workout_routine_name}")                
+                    activity_count = 0
+
+                    warmup_container = st.container(border=True)                                          
+                    exercises_container = st.container(border=True)    
+                    cooldown_container = st.container(border=True) 
+                    inbuilt_map = dict(zip(df_inbuilt_exercises['exercise_type'], df_inbuilt_exercises['exercise_name']))
+                    custom_map = dict(zip(df_custom_exercise['custom_id'], df_custom_exercise['custom_name']))
                     for i, row in daily_exercises.iterrows():
-                        if row.get('activity_type') == 10:
-                            st.write(f"Warmup")                        
-                        elif row.get('activity_type') == 40:
-                            st.write(f"Break")
-                        elif row.get('activity_type') == 50:
-                            st.write(f"Cooldown")
-                        elif row.get('activity_type') == 20:
+                        workout_name = None
+                        activity_type = row.get('activity_type')
+
+                        # warmup
+                        if activity_type == 10:
+                            warmup_container.write(f"🔥 **Warm-Up**")  
+                            warmup_container.write(f"{ms_to_time(row.get('exercise_duration'))}")                            
+                            warmup_container.write(f"{row.get('localized_time')}") 
+                            continue
+                        #cooldown   
+                        elif activity_type == 50:
+                            cooldown_container.write(f"🧘🏻‍♂️ **Cool-down**")
+                            cooldown_container.write(f"{ms_to_time(row.get('exercise_duration'))}")                            
+                            cooldown_container.write(f"{row.get('localized_time')}") 
+                            continue
+
+                        elif activity_type == 40:
+                            exercises_container.markdown(f" --- ")
+                            exercises_container.write(f"Break {ms_to_time(row.get('exercise_duration'))}")
+                            exercises_container.markdown(f" --- ")                            
+                            continue
+                        
+                        # exercises
+
+                        if activity_type == 20:
                             # 20 is inbuilt exercise
                             activity_count += 1        
-                            if row.get('exercise_exercise_type'):
-                                for i2, row2 in df_inbuilt_exercises.iterrows():
-                                    if row2.get('exercise_type') == row.get('exercise_exercise_type'):
-                                        workout_name = row2.get('exercise_name')
-                                st.write(f"{workout_name}")         
-                        elif row.get('activity_type') == 30: 
+                            workout_name = inbuilt_map.get(row.get('exercise_exercise_type'))
+                            workout_time = row.get('localized_time')
+                            workout_duration = ms_to_time(row.get('exercise_duration'))
+                            workout_cals = row.get('exercise_calorie')
+                            workout_reps = row.get('exercise_count')
+                            
+                        elif activity_type == 30: 
                             # 30 is custom exercise
                             activity_count += 1
-                            if row.get('custom_id'):
-                                for i2, row2 in df_custom_exercise.iterrows():
-                                    if row2.get('custom_id') == row.get('custom_id'):
-                                        workout_name = row2.get('custom_name')
-                                st.write(f"{workout_name}")
-                        else:
-                            activity_count += 1
-                            if row.get('custom_id'):
-                                for i2, row2 in df_custom_exercise.iterrows():
-                                    if row2.get('custom_id') == row.get('custom_id'):
-                                        workout_name = row2.get('custom_name')
-                                st.write(f"{workout_name}")
-                            elif row.get('exercise_exercise_type'):
-                                for i2, row2 in df_inbuilt_exercises.iterrows():
-                                    if row2.get('exercise_type') == row.get('exercise_exercise_type'):
-                                        workout_name = row2.get('exercise_name')
-                                st.write(f"{workout_name}")
+                            workout_name = custom_map.get(row.get('custom_id'))
+                            workout_time = row.get('localized_time')
+                            workout_duration = ms_to_time(row.get('exercise_duration'))
+                            workout_cals = row.get('exercise_calorie')
+                            workout_reps = row.get('exercise_count')
+                            
+                        # fallback: unknown type
+                        elif row.get('custom_id'):
+                            for _, row2 in df_custom_exercise.iterrows():
+                                if row2.get('custom_id') == row.get('custom_id'):
+                                    workout_name = row2.get('custom_name')
+                                    workout_time = row.get('localized_time')
+                                    workout_duration = ms_to_time(row.get('exercise_duration'))
+                                    workout_cals = row.get('exercise_calorie')
+                                    if row.get('exercise_count'):
+                                        workout_reps = row.get('exercise_count')
+                                    else:
+                                        workout_reps = 0
+                                    break
+                        elif row.get('exercise_exercise_type'):
+                            for _, row2 in df_inbuilt_exercises.iterrows():
+                                if row2.get('exercise_type') == row.get('exercise_exercise_type'):
+                                    workout_name = row2.get('exercise_name')
+                                    workout_time = row.get('localized_time')
+                                    workout_duration = ms_to_time(row.get('exercise_duration'))
+                                    workout_cals = row.get('exercise_calorie')
+                                    if row.get('exercise_count'):
+                                        workout_reps = row.get('exercise_count')
+                                    else:
+                                        workout_reps = 0
+                                    break
+                        if workout_name:
+                            single_container = exercises_container.container(border=False)
+                            single_container.markdown(f"- ##### {workout_name}")
+                        c1,c2,c3 = single_container.columns(3)                        
+                        if workout_duration:
+                            c1.markdown(f"{workout_duration}")
+                        if workout_reps:
+                            c2.markdown(f"{workout_reps: .0f} reps")
+                        if workout_cals:
+                            c3.markdown(f"{workout_cals:.0f} Cal")
+                        if workout_time:
+                            single_container.markdown(f"{workout_time}")
                                     
 
             #         # Load and display vitals (from JSONs)
