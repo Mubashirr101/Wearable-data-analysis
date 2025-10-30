@@ -96,7 +96,7 @@ METRICS_CONFIG = {
     },
     "exercise":{
         "table":"exercise",
-        "columns": ["exercise_start_time","live_data_internal","routine_datauuid","custom_id","exercise_duration","activity_type","exercise_time_offset","exercise_live_data"],
+        "columns": ["exercise_start_time","live_data_internal","routine_datauuid","custom_id","exercise_duration","activity_type","exercise_exercise_type","exercise_time_offset","exercise_live_data"],
         "jsonPath_template": "com.samsung.shealth.exercise/{0}/{1}",        
     },
     "exercise_routine":{
@@ -108,6 +108,11 @@ METRICS_CONFIG = {
         "table":"exercise_custom_exercise",
         "columns":["custom_name","datauuid","custom_id","custom_type","preference"],
         "jsonPath_template": "com.samsung.shealth.exercise.custom_exercise/{0}/{1}",                
+    },
+    "inbuilt_exercises": {
+    "table": "inbuilt_exercises",
+    "columns":["exercise_type","exercise_name"],
+    "jsonPath_template" : ""
     }
 }
 
@@ -238,6 +243,7 @@ class App:
                 self.dataframes.get("exercise"),
                 self.dataframes.get("exercise_routine"),
                 self.dataframes.get("custom_exercise"),
+                self.dataframes.get("inbuilt_exercises"),
                 self.supabase_client
             ),
             'Coach': pg.show_coach,

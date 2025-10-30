@@ -17,7 +17,7 @@ from xml.etree import ElementTree as ET
 import time
 from httpx import RemoteProtocolError, ReadTimeout, ConnectError
 
-def show_activity(df_exercise,df_exercise_routine,df_custom_exercise,supabase_client):
+def show_activity(df_exercise,df_exercise_routine,df_custom_exercise,df_inbuilt_exercises,supabase_client):
     # Initialize session state for map persistence
     if 'map_center' not in st.session_state:
         st.session_state.map_center = None
@@ -47,16 +47,16 @@ def show_activity(df_exercise,df_exercise_routine,df_custom_exercise,supabase_cl
                 if daily_exercises.empty:
                     st.warning(f"No exercise sessions found for {selected_date}.")
                 else:
-
+                    workout_routine_name = "Workout Routine"
                     ## Workout details (duration,total no. of workouts, total cals, avg hr, max hr, etc)
                     if daily_exercises['routine_datauuid'].nunique() == 1:
                         for i, row in df_exercise_routine.iterrows():
                             if row.get('datauuid') == daily_exercises['routine_datauuid'].iloc[0]:
                                 for i2, row2 in df_custom_exercise.iterrows():
                                     if row2.get('custom_id') == row.get('custom_id'):
-                                        workout_name = row2.get('custom_name')
+                                        workout_routine_name = row2.get('custom_name')
                     
-                    st.markdown(f"#### {workout_name}")
+                    st.markdown(f"#### {workout_routine_name}")
                     ## Workout flow (warmups n cooldowns in separate blocks, breaks in small gaps between exercises
                     st.markdown("---")                    
                     activity_count = 0
@@ -69,16 +69,33 @@ def show_activity(df_exercise,df_exercise_routine,df_custom_exercise,supabase_cl
                             st.write(f"Cooldown")
                         elif row.get('activity_type') == 20:
                             # 20 is inbuilt exercise
-                            activity_count += 1                            
-                            st.write(f"Exercise {activity_count}")
+                            activity_count += 1        
+                            if row.get('exercise_exercise_type'):
+                                for i2, row2 in df_inbuilt_exercises.iterrows():
+                                    if row2.get('exercise_type') == row.get('exercise_exercise_type'):
+                                        workout_name = row2.get('exercise_name')
+                                st.write(f"{workout_name}")         
                         elif row.get('activity_type') == 30: 
                             # 30 is custom exercise
                             activity_count += 1
                             if row.get('custom_id'):
-                                st.write(f"{row.get('custom_id')}")
+                                for i2, row2 in df_custom_exercise.iterrows():
+                                    if row2.get('custom_id') == row.get('custom_id'):
+                                        workout_name = row2.get('custom_name')
+                                st.write(f"{workout_name}")
                         else:
                             activity_count += 1
-                            st.write(f"Exercise {activity_count}")
+                            if row.get('custom_id'):
+                                for i2, row2 in df_custom_exercise.iterrows():
+                                    if row2.get('custom_id') == row.get('custom_id'):
+                                        workout_name = row2.get('custom_name')
+                                st.write(f"{workout_name}")
+                            elif row.get('exercise_exercise_type'):
+                                for i2, row2 in df_inbuilt_exercises.iterrows():
+                                    if row2.get('exercise_type') == row.get('exercise_exercise_type'):
+                                        workout_name = row2.get('exercise_name')
+                                st.write(f"{workout_name}")
+                            
 
                 #         # Duration and stats
                 #         col1, col2, col3 = st.columns(3)
