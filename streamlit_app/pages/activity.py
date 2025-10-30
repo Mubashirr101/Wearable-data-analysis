@@ -33,110 +33,152 @@ def show_activity(df_exercise,df_exercise_routine,df_custom_exercise,df_inbuilt_
     tab1, tab2 = st.tabs(['Indoor Activities 🏋🏻‍♂️', 'Outdoor Activities 👟'])
     
     with tab1:
-        with tab1:
+        # converting milliseconds in hrs/m/s
+        def ms_to_time(ms):
+            seconds = ms / 1000
+            hrs = int(seconds // 3600)
+            min = int((seconds % 3600)//60)
+            secs = seconds % 60
 
-            t1c1,t2c2 = st.columns([4,1])
-            t1c1.subheader("🏋🏻 Workout Session")
+            parts = []
+            if hrs > 0:
+                parts.append(f"{hrs}h")
+            if min > 0:
+                parts.append(f"{min}m")
+            if secs > 0 or not parts:
+                parts.append(f"{secs:.0f}s")
+            return " ".join(parts)
 
-            # Date selector
-            selected_date = t2c2.date_input("Select a Date to View Exercises", key="indoor_activity_date")          
+        t1c1,t2c2 = st.columns([4,1], vertical_alignment="bottom")
+        t1c1.subheader("Workout Details")
 
-            # Filter by selected date
-            if selected_date:
-                daily_exercises = df_exercise[df_exercise["localized_time"].dt.date == pd.to_datetime(selected_date).date()]
-                if daily_exercises.empty:
-                    st.warning(f"No exercise sessions found for {selected_date}.")
-                else:
-                    workout_routine_name = "Workout Routine"
-                    ## Workout details (duration,total no. of workouts, total cals, avg hr, max hr, etc)
-                    if daily_exercises['routine_datauuid'].nunique() == 1:
-                        for i, row in df_exercise_routine.iterrows():
-                            if row.get('datauuid') == daily_exercises['routine_datauuid'].iloc[0]:
-                                for i2, row2 in df_custom_exercise.iterrows():
-                                    if row2.get('custom_id') == row.get('custom_id'):
-                                        workout_routine_name = row2.get('custom_name')
-                    
-                    st.markdown(f"#### {workout_routine_name}")
-                    ## Workout flow (warmups n cooldowns in separate blocks, breaks in small gaps between exercises
-                    st.markdown("---")                    
-                    activity_count = 0
-                    for i, row in daily_exercises.iterrows():
-                        if row.get('activity_type') == 10:
-                            st.write(f"Warmup")                        
-                        elif row.get('activity_type') == 40:
-                            st.write(f"Break")
-                        elif row.get('activity_type') == 50:
-                            st.write(f"Cooldown")
-                        elif row.get('activity_type') == 20:
-                            # 20 is inbuilt exercise
-                            activity_count += 1        
-                            if row.get('exercise_exercise_type'):
-                                for i2, row2 in df_inbuilt_exercises.iterrows():
-                                    if row2.get('exercise_type') == row.get('exercise_exercise_type'):
-                                        workout_name = row2.get('exercise_name')
-                                st.write(f"{workout_name}")         
-                        elif row.get('activity_type') == 30: 
-                            # 30 is custom exercise
-                            activity_count += 1
-                            if row.get('custom_id'):
-                                for i2, row2 in df_custom_exercise.iterrows():
-                                    if row2.get('custom_id') == row.get('custom_id'):
-                                        workout_name = row2.get('custom_name')
-                                st.write(f"{workout_name}")
-                        else:
-                            activity_count += 1
-                            if row.get('custom_id'):
-                                for i2, row2 in df_custom_exercise.iterrows():
-                                    if row2.get('custom_id') == row.get('custom_id'):
-                                        workout_name = row2.get('custom_name')
-                                st.write(f"{workout_name}")
-                            elif row.get('exercise_exercise_type'):
-                                for i2, row2 in df_inbuilt_exercises.iterrows():
-                                    if row2.get('exercise_type') == row.get('exercise_exercise_type'):
-                                        workout_name = row2.get('exercise_name')
-                                st.write(f"{workout_name}")
-                            
+        # Date selector
+        selected_date = t2c2.date_input("Select a Date", key="indoor_activity_date")          
 
-                #         # Duration and stats
-                #         col1, col2, col3 = st.columns(3)
-                #         with col1:
-                #             st.metric("Duration (min)", round(row.get("duration", 0) / 60, 1))
-                #         with col2:
-                #             st.metric("Calories Burned", row.get("calories", "N/A"))
-                #         with col3:
-                #             st.metric("Distance (km)", round(row.get("distance", 0) / 1000, 2))
-
-                #         # Link to routine/custom exercise if available
-                #         custom_info = custom_df[custom_df["id"] == row.get("custom_exercise_id")] if "id" in custom_df.columns else None
-                #         if custom_info is not None and not custom_info.empty:
-                #             st.write(f"**Custom Exercise:** {custom_info.iloc[0].get('name', 'Unnamed')}")
-                #         routine_info = routine_df[routine_df["id"] == row.get("routine_id")] if "id" in routine_df.columns else None
-                #         if routine_info is not None and not routine_info.empty:
-                #             st.write(f"**Routine:** {routine_info.iloc[0].get('name', 'Unnamed')}")
-
-                #         # Recovery HR
-                #         recovery_info = recovery_df[recovery_df["exercise_id"] == row.get("id")] if "id" in recovery_df.columns else None
-                #         if recovery_info is not None and not recovery_info.empty:
-                #             st.metric("Recovery Heart Rate", recovery_info.iloc[0].get("recovery_heart_rate", "N/A"))
-
-                #         # Load and display vitals (from JSONs)
-                #         import json
-                #         try:
-                #             with open("/mnt/data/47bafabf-51bb-4f50-87bc-101692d93dee.com.samsung.health.exercise.live_data.json") as f:
-                #                 live_data = json.load(f)
-                #             with open("/mnt/data/47bafabf-51bb-4f50-87bc-101692d93dee.sensing_status.json") as f:
-                #                 sensing = json.load(f)
-
-                #             hr_values = [d.get("heart_rate") for d in live_data if "heart_rate" in d]
-                #             if hr_values:
-                #                 st.line_chart(pd.Series(hr_values, name="Heart Rate"))
-                #             st.write(f"**Sampling Rate:** {sensing.get('sampling_rate', 'N/A')} ms")
-                #             st.write(f"**Max HR:** {sensing['heart_rate'].get('max_hr_auto', 'N/A')}")
-                #         except Exception as e:
-                #             st.warning(f"Could not load HR/vitals data: {e}")
-
+        # Filter by selected date
+        if selected_date:
+            daily_exercises = df_exercise[df_exercise["localized_time"].dt.date == pd.to_datetime(selected_date).date()]
+            if daily_exercises.empty:
+                st.warning(f"No exercise sessions found for {selected_date}.")
             else:
-                st.info("👆 Select a date to view indoor exercise sessions.")
+                workout_routine_name = "Workout Routine"
+                ## Workout details (duration,total no. of workouts, total cals, avg hr, max hr, etc)
+                if daily_exercises['routine_datauuid'].nunique() == 1:
+                    for i, row in df_exercise_routine.iterrows():
+                        if row.get('datauuid') == daily_exercises['routine_datauuid'].iloc[0]:
+                            for i2, row2 in df_custom_exercise.iterrows():
+                                if row2.get('custom_id') == row.get('custom_id'):
+                                    workout_routine_name = row2.get('custom_name')
+                
+                # total time spent during workout
+                total_duration = 0
+                for i, row in daily_exercises.iterrows():
+                    total_duration += row.get('exercise_duration')
+                total_duration_hrs = ms_to_time(total_duration)
+                
+                # number of exercises in a workkout
+                no_of_exercise = 0
+                for i, row in daily_exercises.iterrows():
+                    if row.get('activity_type') == 20:
+                        # 20 is inbuilt exercise
+                        no_of_exercise += 1                 
+                    elif row.get('activity_type') == 30: 
+                        # 30 is custom exercise
+                        no_of_exercise += 1                       
+                    elif row.get('activity_type') not in [10,40,50]:
+                        # if its not warmup or break or cooldown
+                        no_of_exercise += 1
+
+                # total calories burned during workout
+                burned_cals = 0
+
+                details_container = st.container(border=True)  
+                detail_c1,detail_c2,detail_c3 = details_container.columns(3)              
+                detail_c1.markdown(f"##### Total duration \n {total_duration_hrs}")
+                detail_c2.markdown(f"##### Total workouts \n {no_of_exercise}")
+                detail_c3.markdown(f"##### Calories burned \n {burned_cals}")
+
+
+                ## Workout flow (warmups n cooldowns in separate blocks, breaks in small gaps between exercises
+                activity_count = 0
+                st.markdown(f"#### {workout_routine_name}")                
+                for i, row in daily_exercises.iterrows():
+                    if row.get('activity_type') == 10:
+                        st.write(f"Warmup")                        
+                    elif row.get('activity_type') == 40:
+                        st.write(f"Break")
+                    elif row.get('activity_type') == 50:
+                        st.write(f"Cooldown")
+                    elif row.get('activity_type') == 20:
+                        # 20 is inbuilt exercise
+                        activity_count += 1        
+                        if row.get('exercise_exercise_type'):
+                            for i2, row2 in df_inbuilt_exercises.iterrows():
+                                if row2.get('exercise_type') == row.get('exercise_exercise_type'):
+                                    workout_name = row2.get('exercise_name')
+                            st.write(f"{workout_name}")         
+                    elif row.get('activity_type') == 30: 
+                        # 30 is custom exercise
+                        activity_count += 1
+                        if row.get('custom_id'):
+                            for i2, row2 in df_custom_exercise.iterrows():
+                                if row2.get('custom_id') == row.get('custom_id'):
+                                    workout_name = row2.get('custom_name')
+                            st.write(f"{workout_name}")
+                    else:
+                        activity_count += 1
+                        if row.get('custom_id'):
+                            for i2, row2 in df_custom_exercise.iterrows():
+                                if row2.get('custom_id') == row.get('custom_id'):
+                                    workout_name = row2.get('custom_name')
+                            st.write(f"{workout_name}")
+                        elif row.get('exercise_exercise_type'):
+                            for i2, row2 in df_inbuilt_exercises.iterrows():
+                                if row2.get('exercise_type') == row.get('exercise_exercise_type'):
+                                    workout_name = row2.get('exercise_name')
+                            st.write(f"{workout_name}")
+                        
+
+            #         # Duration and stats
+            #         col1, col2, col3 = st.columns(3)
+            #         with col1:
+            #             st.metric("Duration (min)", round(row.get("duration", 0) / 60, 1))
+            #         with col2:
+            #             st.metric("Calories Burned", row.get("calories", "N/A"))
+            #         with col3:
+            #             st.metric("Distance (km)", round(row.get("distance", 0) / 1000, 2))
+
+            #         # Link to routine/custom exercise if available
+            #         custom_info = custom_df[custom_df["id"] == row.get("custom_exercise_id")] if "id" in custom_df.columns else None
+            #         if custom_info is not None and not custom_info.empty:
+            #             st.write(f"**Custom Exercise:** {custom_info.iloc[0].get('name', 'Unnamed')}")
+            #         routine_info = routine_df[routine_df["id"] == row.get("routine_id")] if "id" in routine_df.columns else None
+            #         if routine_info is not None and not routine_info.empty:
+            #             st.write(f"**Routine:** {routine_info.iloc[0].get('name', 'Unnamed')}")
+
+            #         # Recovery HR
+            #         recovery_info = recovery_df[recovery_df["exercise_id"] == row.get("id")] if "id" in recovery_df.columns else None
+            #         if recovery_info is not None and not recovery_info.empty:
+            #             st.metric("Recovery Heart Rate", recovery_info.iloc[0].get("recovery_heart_rate", "N/A"))
+
+            #         # Load and display vitals (from JSONs)
+            #         import json
+            #         try:
+            #             with open("/mnt/data/47bafabf-51bb-4f50-87bc-101692d93dee.com.samsung.health.exercise.live_data.json") as f:
+            #                 live_data = json.load(f)
+            #             with open("/mnt/data/47bafabf-51bb-4f50-87bc-101692d93dee.sensing_status.json") as f:
+            #                 sensing = json.load(f)
+
+            #             hr_values = [d.get("heart_rate") for d in live_data if "heart_rate" in d]
+            #             if hr_values:
+            #                 st.line_chart(pd.Series(hr_values, name="Heart Rate"))
+            #             st.write(f"**Sampling Rate:** {sensing.get('sampling_rate', 'N/A')} ms")
+            #             st.write(f"**Max HR:** {sensing['heart_rate'].get('max_hr_auto', 'N/A')}")
+            #         except Exception as e:
+            #             st.warning(f"Could not load HR/vitals data: {e}")
+
+        else:
+            st.info("👆 Select a date to view indoor exercise sessions.")
 
     
     with tab2:       
