@@ -53,7 +53,7 @@ def render_metric_tab(tab, metric_name, df, config, supabase_client=None):
             config["value"],
             "Time/Date",
             config["y_label"],
-            f"{config.get('daily_icon','📆')} {config['title']} over Time",
+            f"{config['title']} over Time",
             chart_type=chart_type_map.get(metric_name, "line")
         )
         st.altair_chart(chart_daily, use_container_width=True)
@@ -210,7 +210,6 @@ def render_metric_tab(tab, metric_name, df, config, supabase_client=None):
 
                 if not df_filtered.empty and time_filter != datetime.time(0, 0):
                     df_copy = df_filtered
-                    # df_copy['start_time'] = df_copy.apply(lambda row: apply_offset(row, config['time_offset'], config['start_time']), axis=1)
                     match = df_copy.loc[df_copy["localized_time"].dt.time == time_filter]
                     if not match.empty:
                         jsonFilepath = match.iloc[0]['jsonPath']

@@ -96,7 +96,7 @@ METRICS_CONFIG = {
     },
     "exercise":{
         "table":"exercise",
-        "columns": ["exercise_start_time","live_data_internal","routine_datauuid","custom_id","exercise_duration","activity_type","exercise_exercise_type","exercise_time_offset","exercise_live_data"],
+        "columns": ["exercise_start_time","live_data_internal","routine_datauuid","custom_id","exercise_duration","exercise_calorie","exercise_max_heart_rate","exercise_min_heart_rate","exercise_mean_heart_rate","activity_type","exercise_exercise_type","exercise_time_offset","exercise_live_data"],
         "jsonPath_template": "com.samsung.shealth.exercise/{0}/{1}",        
     },
     "exercise_routine":{
