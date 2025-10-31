@@ -11,11 +11,92 @@ from math import radians, sin, cos, sqrt, atan2
 from branca.element import Template, MacroElement
 from jinja2 import Template
 import hashlib
-from datetime import datetime
+from datetime import datetime, timedelta
 import io
 from xml.etree import ElementTree as ET
 import time
 from httpx import RemoteProtocolError, ReadTimeout, ConnectError
+import re, json
+
+def apply_offset(row, offset_col, time_col):
+    offset_val = row[offset_col]
+    if pd.isnull(offset_val):
+        return row[time_col]
+    offset_str = str(offset_val)
+    match = None
+    # Accept both "UTC+0530" and "+05:30" formats
+    if offset_str.startswith("UTC"):
+        match = re.match(r"UTC([+-])(\d{2})(\d{2})", offset_str)
+    else:
+        match = re.match(r"([+-])(\d{2}):?(\d{2})", offset_str)
+    if match:
+        sign, hh, mm = match.groups()
+        hours, minutes = int(hh), int(mm)
+        delta = timedelta(hours=hours, minutes=minutes)
+        if sign == "-":
+            delta = -delta
+        return row[time_col] + delta
+    return row[time_col]
+
+def loadBinningjsons(offset_col,jsonfilepath,supabase):    
+    bucket_name = "json-bucket"
+    file_path = jsonfilepath
+    res = supabase.storage.from_(bucket_name).download(file_path)
+    data = json.loads(res.decode("utf-8"))
+    dfjson = pd.DataFrame(data)
+    dfjson["start_time"] = pd.to_datetime(dfjson["start_time"],unit="ms")
+    dfjson["offset_time"] = offset_col
+    dfjson["start_time"] = dfjson.apply(lambda row: apply_offset(row,"offset_time","start_time"),axis =1)
+    dfjson = dfjson.sort_values("start_time")
+    return dfjson
+
+def chartBinningjsons(dfJson,xval,xtitle,yval,ytitle,):
+       # base encoding
+    base = alt.Chart(dfJson).encode(
+        x=alt.X(xval, title=xtitle, axis=alt.Axis(format="%I:%M %p")),
+        tooltip=[
+            alt.Tooltip(xval, title="Time", type="temporal", format="%I:%M %p"),
+            alt.Tooltip(yval, title=ytitle),
+        ]
+    )
+   
+    # smooth main line
+    line = base.mark_line(interpolate="monotone", strokeWidth=2.5, color="red").encode(
+        y=alt.Y(f"{yval}:Q", title=ytitle),
+        tooltip=[
+            alt.Tooltip(xval, title="Time", type="temporal", format="%I:%M %p"),
+            alt.Tooltip(yval, title=ytitle),
+        ]
+    )
+
+    # hover selection and highlight points
+    nearest = alt.selection_point(on="mouseover", nearest=True, empty="none", fields=[xval])
+    points = base.mark_circle(size=70, color="yellow").encode(
+        y=alt.Y(f"{yval}:Q"),
+        opacity=alt.condition(nearest, alt.value(1.0), alt.value(0.0))
+    ).add_selection(nearest)
+
+    # median rule
+    median_rule = alt.Chart(dfJson).transform_aggregate(
+        median_value=f"median({yval})"
+    ).mark_rule(color="gray", strokeDash=[4,4]).encode(
+        y=alt.Y("median_value:Q"),
+        tooltip=[alt.Tooltip("median_value:Q", title="Median", format=".2f")]
+    )
+
+    chartBin = (line + points + median_rule).properties(
+        width="container",
+        height=360,
+        title= "\n "
+    ).configure_axis(
+        labelFontSize=11,
+        titleFontSize=12
+    ).configure_title(
+        fontSize=14,
+        anchor="start"
+    ).interactive()  # enable pan/zoom
+
+    return chartBin
 
 def show_activity(df_exercise,df_exercise_routine,df_custom_exercise,df_inbuilt_exercises,supabase_client):
     # Initialize session state for map persistence
@@ -49,11 +130,35 @@ def show_activity(df_exercise,df_exercise_routine,df_custom_exercise,df_inbuilt_
                 parts.append(f"{secs:.0f}s")
             return " ".join(parts)
 
+       
+
         t1c1,t2c2 = st.columns([4,1], vertical_alignment="bottom")
         t1c1.subheader("Workout Details")
 
         # Date selector
         selected_date = t2c2.date_input("Select a Date", key="indoor_activity_date")          
+
+        # hr data for selected exercise
+        @st.dialog('Heart Rate during Exercise: ', width="large")
+        def vitals(workout_name,row):
+            jsonpath = row.get('jsonPath_LiveData')
+            df_bin = None
+            chart_bin = pd.DataFrame()
+            if jsonpath:
+                offset = row.get('exercise_time_offset')                
+                df_bin = loadBinningjsons(offset,jsonpath,supabase_client)  
+                chart_bin = chartBinningjsons(
+                            df_bin,
+                            "start_time",
+                            "Time",
+                            'heart_rate',
+                            'HR',                         
+                        )
+            else:
+                st.info('No HR data available')
+            st.markdown(f'#### {workout_name} -  {min(df_bin['start_time']).strftime("%I:%M %p").lstrip("0").lower()} to {max(df_bin['start_time']).strftime("%I:%M %p").lstrip("0").lower()}')
+
+            st.altair_chart(chart_bin,use_container_width=True)
 
         # Filter by selected date
         if selected_date:
@@ -193,7 +298,8 @@ def show_activity(df_exercise,df_exercise_routine,df_custom_exercise,df_inbuilt_
                         if workout_name:
                             single_container = exercises_container.container(border=False)
                             single_container.markdown(f"- ##### {workout_name}")
-                        c1,c2,c3 = single_container.columns(3)                        
+                        c1,c2,c3 = single_container.columns(3)     
+                        c4,c5 = single_container.columns(2)                   
                         if workout_duration:
                             c1.markdown(f"{workout_duration}")
                         if workout_reps:
@@ -201,7 +307,14 @@ def show_activity(df_exercise,df_exercise_routine,df_custom_exercise,df_inbuilt_
                         if workout_cals:
                             c3.markdown(f"{workout_cals:.0f} Cal")
                         if workout_time:
-                            single_container.markdown(f"{workout_time}")
+                            c4.markdown(f"{workout_time}")
+                        
+                        # vitals
+                        safe_name = re.sub(r'\W+', '_', str(workout_name))
+                        if c5.button('📈🌡️ Vitals',key = f'vitals_{safe_name}'):
+                            vitals(workout_name,row)
+
+                        
                                     
 
             #         # Load and display vitals (from JSONs)
