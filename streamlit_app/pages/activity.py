@@ -55,7 +55,7 @@ def chartBinningjsons(dfJson,xval,xtitle,yval,ytitle,):
     base = alt.Chart(dfJson).encode(
         x=alt.X(xval, title=xtitle, axis=alt.Axis(format="%I:%M %p")),
         tooltip=[
-            alt.Tooltip(xval, title="Time", type="temporal", format="%I:%M %p"),
+            alt.Tooltip(xval, title="Time", type="temporal", format="%I:%M:%S %p"),
             alt.Tooltip(yval, title=ytitle),
         ]
     )
@@ -64,7 +64,7 @@ def chartBinningjsons(dfJson,xval,xtitle,yval,ytitle,):
     line = base.mark_line(interpolate="monotone", strokeWidth=2.5, color="red").encode(
         y=alt.Y(f"{yval}:Q", title=ytitle),
         tooltip=[
-            alt.Tooltip(xval, title="Time", type="temporal", format="%I:%M %p"),
+            alt.Tooltip(xval, title="Time", type="temporal", format="%I:%M:%S %p"),
             alt.Tooltip(yval, title=ytitle),
         ]
     )
@@ -206,20 +206,17 @@ def show_activity(df_exercise,df_exercise_routine,df_custom_exercise,df_inbuilt_
                         no_of_exercise += 1            
 
                 details_container = st.container(border=True)  
+                details_container.markdown(f"#### {workout_routine_name}")                
                 detail_c1,detail_c2,detail_c3,detail_c4,detail_c5,detail_c6 = details_container.columns(6,vertical_alignment="top")              
                 detail_c1.markdown(f"##### Duration ⌚ \n {total_duration_hrs}")
                 detail_c2.markdown(f"##### Workouts 🏋🏻‍♂️ \n {no_of_exercise}")
                 detail_c3.markdown(f"##### Calories 🔥 \n {burned_cals:.0f} kcals")
                 detail_c4.markdown(f"##### Max HR 🫀 \n {max_hr:.0f} bpm")
                 detail_c5.markdown(f"##### Avg HR 🫀 \n {mean_hr:.0f} bpm")
-                detail_c6.markdown(f"##### Min HR 🫀 \n {min_hr:.0f} bpm")
-
-                
-
+                detail_c6.markdown(f"##### Min HR 🫀 \n {min_hr:.0f} bpm")                
 
                 ## Workout flow (warmups n cooldowns in separate blocks, breaks in small gaps between exercises
                 with st.expander(f"Workout Routine:"):
-                    st.markdown(f"#### {workout_routine_name}")                
                     activity_count = 0
 
                     warmup_container = st.container(border=True)                                          
@@ -235,13 +232,13 @@ def show_activity(df_exercise,df_exercise_routine,df_custom_exercise,df_inbuilt_
                         if activity_type == 10:
                             warmup_container.write(f"🔥 **Warm-Up**")  
                             warmup_container.write(f"{ms_to_time(row.get('exercise_duration'))}")                            
-                            warmup_container.write(f"{row.get('localized_time')}") 
+                            warmup_container.write(f"{row.get('localized_time').strftime("%I:%M %p").lstrip("0").lower()}") 
                             continue
                         #cooldown   
                         elif activity_type == 50:
                             cooldown_container.write(f"🧘🏻‍♂️ **Cool-down**")
                             cooldown_container.write(f"{ms_to_time(row.get('exercise_duration'))}")                            
-                            cooldown_container.write(f"{row.get('localized_time')}") 
+                            cooldown_container.write(f"{row.get('localized_time').strftime("%I:%M %p").lstrip("0").lower()}") 
                             continue
 
                         elif activity_type == 40:
@@ -256,7 +253,7 @@ def show_activity(df_exercise,df_exercise_routine,df_custom_exercise,df_inbuilt_
                             # 20 is inbuilt exercise
                             activity_count += 1        
                             workout_name = inbuilt_map.get(row.get('exercise_exercise_type'))
-                            workout_time = row.get('localized_time')
+                            workout_time = row.get('localized_time').strftime("%I:%M %p").lstrip("0").lower()
                             workout_duration = ms_to_time(row.get('exercise_duration'))
                             workout_cals = row.get('exercise_calorie')
                             workout_reps = row.get('exercise_count')
@@ -265,7 +262,7 @@ def show_activity(df_exercise,df_exercise_routine,df_custom_exercise,df_inbuilt_
                             # 30 is custom exercise
                             activity_count += 1
                             workout_name = custom_map.get(row.get('custom_id'))
-                            workout_time = row.get('localized_time')
+                            workout_time = row.get('localized_time').strftime("%I:%M %p").lstrip("0").lower()
                             workout_duration = ms_to_time(row.get('exercise_duration'))
                             workout_cals = row.get('exercise_calorie')
                             workout_reps = row.get('exercise_count')
@@ -275,7 +272,7 @@ def show_activity(df_exercise,df_exercise_routine,df_custom_exercise,df_inbuilt_
                             for _, row2 in df_custom_exercise.iterrows():
                                 if row2.get('custom_id') == row.get('custom_id'):
                                     workout_name = row2.get('custom_name')
-                                    workout_time = row.get('localized_time')
+                                    workout_time = row.get('localized_time').strftime("%I:%M %p").lstrip("0").lower()
                                     workout_duration = ms_to_time(row.get('exercise_duration'))
                                     workout_cals = row.get('exercise_calorie')
                                     if row.get('exercise_count'):
@@ -287,7 +284,7 @@ def show_activity(df_exercise,df_exercise_routine,df_custom_exercise,df_inbuilt_
                             for _, row2 in df_inbuilt_exercises.iterrows():
                                 if row2.get('exercise_type') == row.get('exercise_exercise_type'):
                                     workout_name = row2.get('exercise_name')
-                                    workout_time = row.get('localized_time')
+                                    workout_time = row.get('localized_time').strftime("%I:%M %p").lstrip("0").lower()
                                     workout_duration = ms_to_time(row.get('exercise_duration'))
                                     workout_cals = row.get('exercise_calorie')
                                     if row.get('exercise_count'):
