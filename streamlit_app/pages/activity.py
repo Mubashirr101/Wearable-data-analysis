@@ -4,11 +4,14 @@ import folium
 from streamlit_folium import st_folium
 from folium import plugins
 import altair as alt
+import streamlit as st
+from PIL import Image
 from fitparse import FitFile
 import gpxpy
 import numpy as np
 from math import radians, sin, cos, sqrt, atan2
 from branca.element import Template, MacroElement
+from pathlib import Path
 from jinja2 import Template
 import hashlib
 from datetime import datetime, timedelta
@@ -110,7 +113,7 @@ def show_activity(df_exercise,df_exercise_routine,df_custom_exercise,df_inbuilt_
         st.session_state.activity_df = None
     if 'current_file_hash' not in st.session_state:
         st.session_state.current_file_hash = None
-
+    
     tab1, tab2 = st.tabs(['Indoor Activities 🏋🏻‍♂️', 'Outdoor Activities 👟'])
     
     with tab1:
@@ -230,23 +233,38 @@ def show_activity(df_exercise,df_exercise_routine,df_custom_exercise,df_inbuilt_
 
                         # warmup
                         if activity_type == 10:
-                            warmup_container.write(f"🔥 **Warm-Up**")  
-                            warmup_container.write(f"{ms_to_time(row.get('exercise_duration'))}")                            
-                            warmup_container.write(f"{row.get('localized_time').strftime("%I:%M %p").lstrip("0").lower()}") 
+                            c1,c2,c3,c4,c5 = warmup_container.columns(5)
+                            c1.write(f"🔥 **Warm-Up**")  
+                            c2.write(f"{ms_to_time(row.get('exercise_duration'))}")                            
+                            c3.write(f"{row.get('localized_time').strftime("%I:%M %p").lstrip("0").lower()}") 
+                            c4.write(f"{row.get('exercise_calorie')} Cal")
+                            if c5.button('📈🌡️ Vitals',key = f'vitals_warmup'):
+                                vitals("Warm-Up",row)
                             continue
                         #cooldown   
                         elif activity_type == 50:
-                            cooldown_container.write(f"🧘🏻‍♂️ **Cool-down**")
-                            cooldown_container.write(f"{ms_to_time(row.get('exercise_duration'))}")                            
-                            cooldown_container.write(f"{row.get('localized_time').strftime("%I:%M %p").lstrip("0").lower()}") 
+                            c1,c2,c3,c4,c5 = cooldown_container.columns(5)
+                            c1.write(f"🧘🏻‍♂️ **Cool Down**")  
+                            c2.write(f"{ms_to_time(row.get('exercise_duration'))}")                            
+                            c3.write(f"{row.get('localized_time').strftime("%I:%M %p").lstrip("0").lower()}") 
+                            c4.write(f"{row.get('exercise_calorie')} Cal")
+                            if c5.button('📈🌡️ Vitals',key = f'vitals_cooldown'):
+                                vitals("CoolDown",row)
+                                  
+                          
+
+                            # # Assuming 'my_image.png' is in the same directory as your script
+                            # image_path = Path(__file__).parent / "boxing.png"
+                            # image = Image.open(image_path)
+                            # st.image(image)
                             continue
 
                         elif activity_type == 40:
-                            exercises_container.markdown(f" --- ")
-                            exercises_container.write(f"Break {ms_to_time(row.get('exercise_duration'))}")
-                            exercises_container.markdown(f" --- ")                            
+                            exercises_container.markdown("<hr style='margin: 0rem 0;'>",unsafe_allow_html=True)
+                            exercises_container.markdown(f"&nbsp;&nbsp;&nbsp;*Break &nbsp;&nbsp;- &nbsp;&nbsp;&nbsp;{ms_to_time(row.get('exercise_duration'))}*")
+                            exercises_container.markdown("<hr style='margin: 0rem 0;'>",unsafe_allow_html=True)                                                        
                             continue
-                        
+                                                    
                         # exercises
 
                         if activity_type == 20:
@@ -295,11 +313,10 @@ def show_activity(df_exercise,df_exercise_routine,df_custom_exercise,df_inbuilt_
                         if workout_name:
                             single_container = exercises_container.container(border=False)
                             single_container.markdown(f"- ##### {workout_name}")
-                        c1,c2,c3 = single_container.columns(3)     
-                        c4,c5 = single_container.columns(2)                   
+                        c1,c2,c3,c4,c5 = single_container.columns(5)                
                         if workout_duration:
                             c1.markdown(f"{workout_duration}")
-                        if workout_reps:
+                        if workout_reps is not None and not pd.isna(workout_reps):
                             c2.markdown(f"{workout_reps: .0f} reps")
                         if workout_cals:
                             c3.markdown(f"{workout_cals:.0f} Cal")
