@@ -7,7 +7,7 @@ from supabase import create_client
 from streamlit_navigation_bar import st_navbar
 import pages as pg
 from datetime import timedelta
-
+import time
 
 def apply_offset(row, offset_col, time_col):
     offset_val = row[offset_col]
@@ -60,8 +60,8 @@ def querySupabase(_engine, table: str, columns: list, retries=3):
                 return df
         except Exception as e:
             if attempt < retries - 1:
-                st.warning(f"Query failed, retrying... ({attempt + 1}/{retries})")
-                import time; time.sleep(2)
+                st.warning(f"Query failed, retryingg... ({attempt + 1}/{retries}) — {e}")                
+                time.sleep(2)
             else:
                 st.error(f"Query failed after {retries} attempts: {e}")
                 raise e

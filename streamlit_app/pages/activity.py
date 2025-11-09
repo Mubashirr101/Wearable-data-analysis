@@ -20,6 +20,7 @@ from xml.etree import ElementTree as ET
 import time
 from httpx import RemoteProtocolError, ReadTimeout, ConnectError
 import re, json
+import base64
 
 def apply_offset(row, offset_col, time_col):
     offset_val = row[offset_col]
@@ -101,6 +102,58 @@ def chartBinningjsons(dfJson,xval,xtitle,yval,ytitle,):
 
     return chartBin
 
+
+def loadWorkoutimages(workout_types, workout_name, supabase,is_svg = False):   
+    if not workout_name.lower().endswith((".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg")):
+        if is_svg == True:
+            workout_name += ".svg"
+        elif is_svg == False:
+            workout_name += ".png"
+
+    bucket_name = "workout-metadata"
+    retries = 3
+
+    file_data = None
+    found_path = None
+    for workout_type in workout_types:
+        file_path = f"{workout_type}/{workout_name.replace(" ","-").lower()}"
+        for attempt in range(retries):
+            try:
+                file_data = supabase.storage.from_(bucket_name).download(file_path)
+                found_path = file_path
+                break
+            except (RemoteProtocolError, ReadTimeout, ConnectError) as e:
+                if attempt < retries - 1:
+                    st.warning(f"⚠️ Download failed for {file_path} (attempt {attempt+1}/{retries}). Retrying...")
+                    time.sleep(1)
+                else:
+                    st.error(f"❌ Failed to download {file_path}: {str(e)}")
+                    
+            except Exception as e:
+                break
+        if file_data:
+            break
+
+    if not file_data:
+        # st.error(f"❌ '{workout_name}' not found in: {', '.join(workout_types)}")
+        return None, None
+
+    # SVG case (return HTML img tag)
+    if workout_name.lower().endswith(".svg"):
+        svg_text = file_data.decode("utf-8")
+        b64 = base64.b64encode(svg_text.encode("utf-8")).decode("utf-8")
+        svg_html = f'<img src="data:image/svg+xml;base64,{b64}" style="width:100%; max-width:260px;" />'
+        return "svg", svg_html
+
+    # Image case (return PIL image)
+    try:
+        img = Image.open(io.BytesIO(file_data))
+        return "img", img
+    except Exception as e:
+        st.error(f"❌ Unable to open image: {str(e)}")
+        return None, None
+
+
 def show_activity(df_exercise,df_exercise_routine,df_custom_exercise,df_inbuilt_exercises,supabase_client):
     # Initialize session state for map persistence
     if 'map_center' not in st.session_state:
@@ -160,7 +213,6 @@ def show_activity(df_exercise,df_exercise_routine,df_custom_exercise,df_inbuilt_
             else:
                 st.info('No HR data available')
             st.markdown(f'#### {workout_name} -  {min(df_bin['start_time']).strftime("%I:%M %p").lstrip("0").lower()} to {max(df_bin['start_time']).strftime("%I:%M %p").lstrip("0").lower()}')
-
             st.altair_chart(chart_bin,use_container_width=True)
 
         # Filter by selected date
@@ -176,8 +228,16 @@ def show_activity(df_exercise,df_exercise_routine,df_custom_exercise,df_inbuilt_
                         if row.get('datauuid') == daily_exercises['routine_datauuid'].iloc[0]:
                             for i2, row2 in df_custom_exercise.iterrows():
                                 if row2.get('custom_id') == row.get('custom_id'):
-                                    workout_routine_name = row2.get('custom_name')
+                                    workout_routine_name = row2.get('custom_name')                                    
                 
+                # Finding workout types from the routine name                       
+                workout_types = []
+                if '&' in workout_routine_name:
+                    for w in workout_routine_name.split("&"):
+                        workout_types.append(w.strip())     
+                else:
+                    workout_types.append(workout_routine_name.strip()) 
+
                 # total time spent & calories burned during workout and min, max & avg hr
                 total_duration = 0
                 burned_cals = 0            
@@ -216,11 +276,22 @@ def show_activity(df_exercise,df_exercise_routine,df_custom_exercise,df_inbuilt_
                 detail_c3.markdown(f"##### Calories 🔥 \n {burned_cals:.0f} kcals")
                 detail_c4.markdown(f"##### Max HR 🫀 \n {max_hr:.0f} bpm")
                 detail_c5.markdown(f"##### Avg HR 🫀 \n {mean_hr:.0f} bpm")
-                detail_c6.markdown(f"##### Min HR 🫀 \n {min_hr:.0f} bpm")                
+                detail_c6.markdown(f"##### Min HR 🫀 \n {min_hr:.0f} bpm") 
+                for types in workout_types:                    
+                    img_type, img_data = loadWorkoutimages(workout_types, types.lower() , supabase_client, is_svg= True)
+                    if img_type == "svg":
+                        details_container.markdown(img_data, unsafe_allow_html=True)
+                    else:
+                        details_container.image(img_data)
+              
+
+
 
                 ## Workout flow (warmups n cooldowns in separate blocks, breaks in small gaps between exercises
                 with st.expander(f"Workout Routine:"):
                     activity_count = 0
+
+                    
 
                     warmup_container = st.container(border=True)                                          
                     exercises_container = st.container(border=True)    
@@ -252,11 +323,6 @@ def show_activity(df_exercise,df_exercise_routine,df_custom_exercise,df_inbuilt_
                                 vitals("CoolDown",row)
                                   
                           
-
-                            # # Assuming 'my_image.png' is in the same directory as your script
-                            # image_path = Path(__file__).parent / "boxing.png"
-                            # image = Image.open(image_path)
-                            # st.image(image)
                             continue
 
                         elif activity_type == 40:
@@ -310,9 +376,16 @@ def show_activity(df_exercise,df_exercise_routine,df_custom_exercise,df_inbuilt_
                                     else:
                                         workout_reps = 0
                                     break
+                        
                         if workout_name:
                             single_container = exercises_container.container(border=False)
                             single_container.markdown(f"- ##### {workout_name}")
+                            img_type, img_data = loadWorkoutimages(workout_types,workout_name, supabase_client)
+                            if img_data:
+                                if img_type == "svg":
+                                    single_container.markdown(img_data, unsafe_allow_html=True)
+                                else:
+                                    single_container.image(img_data)
                         c1,c2,c3,c4,c5 = single_container.columns(5)                
                         if workout_duration:
                             c1.markdown(f"{workout_duration}")
@@ -322,6 +395,7 @@ def show_activity(df_exercise,df_exercise_routine,df_custom_exercise,df_inbuilt_
                             c3.markdown(f"{workout_cals:.0f} Cal")
                         if workout_time:
                             c4.markdown(f"{workout_time}")
+                        
                         
                         # vitals
                         safe_name = re.sub(r'\W+', '_', str(workout_name))
