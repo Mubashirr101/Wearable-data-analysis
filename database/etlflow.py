@@ -103,7 +103,7 @@ def update_env_with_latest_folder(env_path: str, variable1: str,variable2: str, 
 
         latest_folder = max(all_folders, key=os.path.getctime)
         ## hardcoding a latest file incase a file's eltl flow was skipped
-        # latest_folder = r"data\raw\Samsung Health\samsunghealth_shaikhmubashir197_20250818193149"
+        latest_folder = r"data\raw\Samsung Health\samsunghealth_shaikhmubashir197_20251108201807"
         escaped_path = latest_folder.replace("\\", "\\\\")
 
         updated_lines = []
