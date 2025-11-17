@@ -94,11 +94,11 @@ def update_env_with_latest_folder(env_path: str, variable1: str,variable2: str, 
         all_folders = [
             os.path.join(target_folder, item)
             for item in os.listdir(target_folder)
-            if os.path.isdir(os.path.join(target_folder, item))
+            if os.path.isdir(os.path.join(target_folder, item)) and item.startswith("samsunghealth_")
         ]
 
         if not all_folders:
-            logging.error("No folders found in the target directory: %s", target_folder)
+            logging.error("No folders starting with 'samsunghealth_' found in the target directory: %s", target_folder)
             return
 
         latest_folder = max(all_folders, key=os.path.getctime)
@@ -158,13 +158,13 @@ def run_flow():
         ## connect the DB, 2 options -> local OR supabase
         conn = get_connection("supabase")        
         ## run scripts
-        savebackups(BACKUP_PATH)
-        findnewfiles(FILENAMES_JSON)
-        save_feat(data_path)
-        run_etl(data_path,conn)
-        run_json_sync(json_path)
-        run_healthsync_sync(healthsync_path)
-        getEntryCount(TABLE_NAMES_JSON,conn)
+        # savebackups(BACKUP_PATH)
+        # findnewfiles(FILENAMES_JSON)
+        # save_feat(data_path)
+        # run_etl(data_path,conn)
+        # run_json_sync(json_path)
+        # run_healthsync_sync(healthsync_path)
+        # getEntryCount(TABLE_NAMES_JSON,conn)
 
         # closing the connection of DB
         conn.close()
