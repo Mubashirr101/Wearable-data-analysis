@@ -1,3 +1,12 @@
+import os, json, urllib.parse, datetime, re
+import pandas as pd
+import streamlit as st
+from dotenv import load_dotenv
+from sqlalchemy import create_engine, text
+from supabase import create_client
+from streamlit_navigation_bar import st_navbar
+from datetime import timedelta
+import time
 import spacy
 import dateparser
 from dateparser.search import search_dates
@@ -296,7 +305,281 @@ def parse_prompt(nlp,Prompt):
     return tables, final_dates
 
 
+
+
+
+# removing old start_time and adding the localized time as start_time
+# removing unnecessary cols from the tables (jsonPath, binning, time offset)
+def clean_raw_df(raw_dataframes):
+    df = raw_dataframes
+    for key, value in df.items():
+        value = value.loc[:,~value.columns.str.contains("start_time")]
+        value = value.loc[:,~value.columns.str.contains("time_offset")]
+        value = value.loc[:,~value.columns.str.contains("jsonPath")]
+        value = value.loc[:,~value.columns.str.contains("binning")]
+        
+
+        value = value.rename(columns= lambda c: "start_time" if "localized_time" in c else c)
+        cols = value.columns.tolist()
+        if "start_time" in cols:
+            cols.insert(0, cols.pop(cols.index("start_time")))
+            value = value[cols]
+        df[key] = value
+    
+    return df
+
+
+    ## Now we take the 'phrase : date' pair and create context for filtering the detected tables
+
+def filter_df(date,dfs):
+    target_date = pd.to_datetime(date).date()
+    filtered_dfs = {}
+    for table_name, table in dfs.items():
+        df_filtered = table[table["start_time"].dt.date == target_date]
+        filtered_dfs[table_name] = df_filtered
+    return filtered_dfs   
+
+#############################################################
+def fetch_dfs(df,Prompt,tables,phrase_date_pair):
+    ## cases:
+    ## case 1: data for one or more date to be fetched (all dates which are specified) eg: 24 nov, yesterday
+    ## case 2: data for one or more week to be fetched (all dates which are specified) eg: last week, this week
+    ## case 3: data for one or more month to be fetched (all months which are specified) eg : aug, last month, this month
+    ## case 4: a range of data from one date to another is to be fetched (both dates which are specified) eg: [23 nov, 30 nov], [1 aug, 18 aug]
+
+    # logic: 
+    # for fetching dates: check for patterns in phrases like : 24 nov, yesterday, today
+    # for fetching weeks: check for patterns in phrases like : last week, this week
+    # for fetching months: check for patterns in phrases like: month names 
+    # for fetching range: check for keywords in received prompt like: from .. to .. 
+
+    # phrases
+    pattern = r"\b\d{1,2}\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|january|february|march|april|june|july|august|september|october|november|december)\b"
+    phrases = ["yesterday","today"]
+    # month_patterns = r"(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|january|february|march|april|may|june|july|august|september|october|november|december)"
+
+    month_patterns = r"(?:january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)"
+    range_pattern = rf"from\s+((?:\d{{1,2}}(?:st|nd|rd|th)?\s+)?{month_patterns})\s+to\s+((?:\d{{1,2}}(?:st|nd|rd|th)?\s+)?{month_patterns})"
+
+
+    # dataframes -> df
+    specified_dfs = {}
+    for table in tables:
+        if table in df:
+            specified_dfs[table] = df[table] 
+
+    for key, value in phrase_date_pair.items():
+        if re.fullmatch(pattern, key.lower()) or key in phrases:
+            print(f'fetch a day: {key} -> {value}') 
+            # now fetch all the entries matching this date 
+            filtered_dfs = filter_df(value,specified_dfs) 
+            print(filtered_dfs)       
+        elif 'week' in key:
+            print('fetch a week:',{key} ,'->', {value})
+            # now fetch all the entries present on this dates week
+        elif 'month' in key or re.fullmatch(month_patterns, key.lower()):
+            print('fetch a month:',{key} ,'->', {value})
+            # now fetch all the entries matching this dates month
+
+
+    r = re.search(range_pattern, Prompt, re.IGNORECASE)
+    if r:
+        # print('range found:',r.group(0))
+        print(phrase_date_pair[r.group(1)]) # from date
+        print(phrase_date_pair[r.group(2)]) # to date
+
+        # now fetch all the entries that between from date and to date
+
+
+
+
+
+#####################################################################
+
+def apply_offset(row, offset_col, time_col):
+    offset_val = row[offset_col]
+    if pd.isnull(offset_val):
+        return row[time_col]
+    offset_str = str(offset_val)
+    match = None
+    # Accept both "UTC+0530" and "+05:30" formats
+    if offset_str.startswith("UTC"):
+        match = re.match(r"UTC([+-])(\d{2})(\d{2})", offset_str)
+    else:
+        match = re.match(r"([+-])(\d{2}):?(\d{2})", offset_str)
+    if match:
+        sign, hh, mm = match.groups()
+        hours, minutes = int(hh), int(mm)
+        delta = timedelta(hours=hours, minutes=minutes)
+        if sign == "-":
+            delta = -delta
+        return row[time_col] + delta
+    return row[time_col]
+
+# -------------------- Cache -----------------------#
+def get_supabase_client():
+    load_dotenv()
+    url = os.getenv("url")
+    key = os.getenv("key")
+    return create_client(url, key)
+
+def get_engine():
+    load_dotenv()
+    return create_engine(
+        f"postgresql+psycopg2://{os.getenv('user')}:{urllib.parse.quote_plus(os.getenv('password'))}@{os.getenv('host')}:{os.getenv('port')}/{os.getenv('dbname')}",
+        pool_pre_ping=True,  # checks if connection is alive
+        pool_recycle=1800    # recycle every 30 mins
+    )
+
+def querySupabase(_engine, table: str, columns: list, retries=3):
+    #Query Supabase/Postgres with retry logic.
+    cols_str = ",".join(columns)
+    query = text(f"SELECT {cols_str} FROM {table}")
+    
+    for attempt in range(retries):
+        try:
+            with _engine.connect() as conn:
+                df = pd.read_sql(query, conn)
+                return df
+        except Exception as e:
+            if attempt < retries - 1:
+                st.warning(f"Query failed, retryingg... ({attempt + 1}/{retries}) — {e}")                
+                time.sleep(2)
+            else:
+                st.error(f"Query failed after {retries} attempts: {e}")
+                raise e
+
+# -------------------- Metric Config --------------------#
+METRICS_CONFIG = {
+    "stress": {
+        "table": "stress",
+        "columns": ["start_time", "score","min","max", "time_offset", "binning_data"],
+        "jsonPath_template": "com.samsung.shealth.stress/{0}/{1}",
+    },
+    "hr": {
+        "table": "tracker_heart_rate",
+        "columns": ["heart_rate_start_time", "heart_rate_heart_rate", "heart_rate_min", "heart_rate_max", "heart_rate_time_offset", "heart_rate_heart_beat_count", "heart_rate_deviceuuid", "heart_rate_binning_data"],
+        "jsonPath_template": "com.samsung.shealth.tracker.heart_rate/{0}/{1}",
+    },
+    "spo2": {
+        "table": "tracker_oxygen_saturation",
+        "columns": ["oxygen_saturation_start_time", "oxygen_saturation_spo2","oxygen_saturation_heart_rate", "oxygen_saturation_time_offset", "oxygen_saturation_binning"],
+        "jsonPath_template": "com.samsung.shealth.tracker.oxygen_saturation/{0}/{1}",
+    },
+    "steps": {
+        "table": "tracker_pedometer_step_count",
+        "columns": ["step_count_start_time", "step_count_count","run_step","walk_step","step_count_speed","step_count_distance","step_count_calorie", "step_count_time_offset"],
+        "jsonPath_template": "",
+    },
+    "calorie": {
+        "table": "calories_burned_details",
+        "columns": ["calories_burned_day_time","calories_burned_create_time","active_calories_goal","total_exercise_calories","calories_burned_tef_calorie","calories_burned_active_time","calories_burned_rest_calorie","calories_burned_active_calorie", "extra_data"],
+        "jsonPath_template": "com.samsung.shealth.calories_burned.details/{0}/{1}",
+    },
+    "exercise":{
+        "table":"exercise",
+        "columns": ["exercise_start_time","live_data_internal","routine_datauuid","custom_id","exercise_duration","exercise_calorie","exercise_max_heart_rate","exercise_min_heart_rate","exercise_mean_heart_rate","activity_type","exercise_exercise_type","exercise_count","exercise_time_offset","exercise_live_data"],
+        "jsonPath_template": "com.samsung.shealth.exercise/{0}/{1}",        
+    },
+    "exercise_routine":{
+        "table":"exercise_routine",
+        "columns":["datauuid","custom_id","total_calorie","activities"],
+        "jsonPath_template": "com.samsung.shealth.exercise.routine/{0}/{1}",        
+    },
+    "custom_exercise":{
+        "table":"exercise_custom_exercise",
+        "columns":["custom_name","datauuid","custom_id","custom_type","preference"],
+        "jsonPath_template": "com.samsung.shealth.exercise.custom_exercise/{0}/{1}",                
+    },
+    "inbuilt_exercises": {
+    "table": "inbuilt_exercises",
+    "columns":["exercise_type","exercise_name"],
+    "jsonPath_template" : ""
+    }
+}
+
+# -------------------- Warmup --------------------#
+def warmup():
+    """Load all metrics into session and Supabase client safely."""
+    supabase_client = get_supabase_client()
+    engine = get_engine()
+    
+    dataframes = {}
+    
+    def safe_jsonpath(val, template):
+        """Generate jsonPath safely for binning columns."""
+        if pd.isna(val) or val == "":
+            return ""
+        val_str = str(val)
+        first_char = val_str[0] if len(val_str) > 0 else ""
+        return template.format(first_char, val)
+    
+    for metric, cfg in METRICS_CONFIG.items():
+        # Query columns
+        df = querySupabase(engine, cfg["table"], cfg["columns"])
+        
+        # Add jsonPath column if template exists
+        if metric == 'exercise':
+            if cfg["jsonPath_template"]:
+                bin_col1 = 'exercise_live_data'
+                bin_col2 = 'live_data_internal'
+                df['jsonPath_LiveData'] = df[bin_col1].apply(lambda x: safe_jsonpath(x, cfg["jsonPath_template"]))
+                df['jsonPath_LiveInternal'] = df[bin_col2].apply(lambda x: safe_jsonpath(x, cfg["jsonPath_template"]))            
+            else:
+                df['jsonPath_LiveData'] = ""
+                df['jsonPath_LiveInternal'] = ""
+        elif metric == 'exercise_routine':
+            if cfg["jsonPath_template"]:
+                bin_col1 = 'activities'
+                df['jsonPath_activities'] = df[bin_col1].apply(lambda x: safe_jsonpath(x, cfg["jsonPath_template"]))
+            else:
+                df['jsonPath_activities'] = ""
+        elif metric == 'custom_exercise':
+            if cfg["jsonPath_template"]:
+                bin_col1 = 'preference'
+                df['jsonPath_preference'] = df[bin_col1].apply(lambda x: safe_jsonpath(x, cfg["jsonPath_template"]))
+            else:
+                df['jsonPath_preference'] = ""                
+        else:
+            if cfg["jsonPath_template"]:
+                bin_col = df.columns[-1]  # assume last column is the binning column
+                df['jsonPath'] = df[bin_col].apply(lambda x: safe_jsonpath(x, cfg["jsonPath_template"]))
+            else:
+                df['jsonPath'] = ""
+
+        # ----------- Apply offset ONCE per metric -----------
+        # Stress
+        if metric == "stress" and "time_offset" in df.columns and "start_time" in df.columns:
+            df["localized_time"] = df.apply(lambda r: apply_offset(r, "time_offset", "start_time"), axis=1)
+        # Heart Rate
+        elif metric == "hr" and "heart_rate_time_offset" in df.columns and "heart_rate_start_time" in df.columns:
+            df["localized_time"] = df.apply(lambda r: apply_offset(r, "heart_rate_time_offset", "heart_rate_start_time"), axis=1)
+        # SpO2
+        elif metric == "spo2" and "oxygen_saturation_time_offset" in df.columns and "oxygen_saturation_start_time" in df.columns:
+            df["localized_time"] = df.apply(lambda r: apply_offset(r, "oxygen_saturation_time_offset", "oxygen_saturation_start_time"), axis=1)
+        # Steps
+        elif metric == "steps" and "step_count_time_offset" in df.columns and "step_count_start_time" in df.columns:
+            df["localized_time"] = df.apply(lambda r: apply_offset(r, "step_count_time_offset", "step_count_start_time"), axis=1)
+        # Calorie 
+        elif metric == "calorie" and "calories_burned_day_time" in df.columns:
+            df["localized_time"] = pd.to_datetime(df["calories_burned_day_time"], errors="coerce")
+        # Exercise
+        elif metric == "exercise" and "exercise_time_offset" in df.columns and "exercise_start_time" in df.columns:
+            df["localized_time"] = df.apply(lambda r: apply_offset(r, "exercise_time_offset", "exercise_start_time"), axis=1)
+        # -----------------------------------------------------
+
+        dataframes[metric] = df
+    
+    return supabase_client, dataframes
+
+############################################################################
+
+
+supabase_client, dataframes = warmup()
+# dataframes = None # this will be the fetch raw df from app.py
 # Prompt = input("Enter Prompt:")
-Prompt = "How was my hr between 24 nov and 23 nov n this week n yesterday n last week n last month"
-tables , dates = parse_prompt(nlp,Prompt)
-print(tables, "\n", dates)
+Prompt = "stress at 6 october "
+tables , phrase_date_pair = parse_prompt(nlp,Prompt)
+# print(tables, "\n", phrase_date_pair)
+cleaned_dfs = clean_raw_df(dataframes)
+fetch_dfs(cleaned_dfs,Prompt,tables,phrase_date_pair)

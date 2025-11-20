@@ -5,7 +5,7 @@ from google.genai import Client
 import time
 
 
-def show_coach():
+def show_coach(dataframes,supabase_client):
     load_dotenv()
 
     model = os.getenv("g_llm_model")

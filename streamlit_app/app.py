@@ -246,7 +246,10 @@ class App:
                 self.dataframes.get("inbuilt_exercises"),
                 self.supabase_client
             ),
-            'Coach': pg.show_coach,
+            'Coach': lambda: pg.show_coach(
+                self.dataframes,               
+                self.supabase_client
+            ),
             'More': pg.show_more,
         }
 
