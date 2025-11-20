@@ -284,7 +284,6 @@ def standardize_date(date_str, current_year=None):
 
 def parse_prompt(nlp,Prompt):
     tables, dates2dates, words2dates = detect_tables_n_dates(nlp,Prompt)
-    # print(tables)
     standardized_dates2dates = {}
     for t in dates2dates:
         standardized_dates2dates[t] = standardize_date(t)
