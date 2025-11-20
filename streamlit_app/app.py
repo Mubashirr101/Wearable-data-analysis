@@ -169,7 +169,7 @@ def warmup():
         # ----------- Apply offset ONCE per metric -----------
         # Stress
         if metric == "stress" and "time_offset" in df.columns and "start_time" in df.columns:
-            df["localized_time"] = df.apply(lambda r: apply_offset(r, "time_offset", "start_time"), axis=1)
+            df["localized_time"] = df.apply(lambda r: apply_offset(r, "time_offset", "start_time"), axis=1)                    
         # Heart Rate
         elif metric == "hr" and "heart_rate_time_offset" in df.columns and "heart_rate_start_time" in df.columns:
             df["localized_time"] = df.apply(lambda r: apply_offset(r, "heart_rate_time_offset", "heart_rate_start_time"), axis=1)
@@ -247,8 +247,16 @@ class App:
                 self.supabase_client
             ),
             'Coach': lambda: pg.show_coach(
-                self.dataframes,               
-                self.supabase_client
+                self.dataframes.get("stress"),
+                self.dataframes.get("hr"),
+                self.dataframes.get("spo2"),
+                self.dataframes.get("steps"),
+                self.dataframes.get("calorie"),
+                self.dataframes.get("exercise"),
+                self.dataframes.get("exercise_routine"),
+                self.dataframes.get("custom_exercise"),
+                self.dataframes.get("inbuilt_exercises"),                
+                self.supabase_client 
             ),
             'More': pg.show_more,
         }

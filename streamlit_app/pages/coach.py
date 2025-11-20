@@ -10,9 +10,20 @@ import re
 from datetime import datetime
 import pandas as pd
 
-def show_coach(dataframes,supabase_client):
+def show_coach(df_stress,df_hr,df_spo2,df_steps,df_calorie,df_exercise,df_exercise_routine,df_custom_exercise,df_inbuilt_exercises,supabase_client):
     load_dotenv()
 
+    dfs = {
+        'stress':df_stress,
+        'hr': df_hr,
+        'spo2':df_spo2,
+        'steps':df_steps,
+        'calorie':df_calorie,
+        'exercise':df_exercise,
+        'exercise_routine':df_exercise_routine,
+        'custom_exercise':df_custom_exercise,
+        'inbuilt_exercises':df_inbuilt_exercises
+    }
     model = os.getenv("g_llm_model")
     g_client = Client(api_key=os.getenv("google_ai_studio_key"))
     nlp = spacy.load("en_core_web_sm")
@@ -279,6 +290,7 @@ def show_coach(dataframes,supabase_client):
             target_date = pd.to_datetime(date).date()
             target_iso_year, target_iso_week, _ = target_date.isocalendar()
         for table_name, table in dfs.items():
+            print(table_name)
             if type == "range":
                 df_filtered = table[(table["start_time"] >= start_date) & (table["start_time"] <= end_date)]
             elif type == "day":
@@ -321,6 +333,7 @@ def show_coach(dataframes,supabase_client):
 
         r = re.search(range_pattern, Prompt, re.IGNORECASE)
         # check for ranged filtering (from {date} to {date} )
+        filtered_dfs = {}
         if r:
             # print('range found:',r.group(0))  
             start_date = phrase_date_pair[r.group(1)] # from date
@@ -342,9 +355,10 @@ def show_coach(dataframes,supabase_client):
                 elif 'month' in key or re.fullmatch(month_patterns, key.lower()):
                     print('fetch a month:',{key} ,'->', {value})
                     # now fetch all the entries matching this dates month
-                    filtered_dfs = filter_df(specified_dfs,"month",date=value)   
-
-        return filtered_dfs 
+                    filtered_dfs = filter_df(specified_dfs,"month",date=value) 
+        final_dfs = filtered_dfs  
+        print(final_dfs)
+        return final_dfs 
 
 
     def get_fitness_context(prompt,dataframes):                
@@ -352,6 +366,7 @@ def show_coach(dataframes,supabase_client):
         # print(tables, "\n", phrase_date_pair)
         cleaned_dfs = clean_raw_df(dataframes)
         context_data = fetch_dfs(cleaned_dfs,prompt,tables,phrase_date_pair)
+        print(context_data)
         return context_data
     # ------ Token speed ----
 
@@ -368,6 +383,7 @@ def show_coach(dataframes,supabase_client):
     
     # ---- LLM CALL ----
     def call_ai(prompt,dataframes):
+        print(prompt)
         context = get_fitness_context(prompt,dataframes)
         final_prompt = (
             f"You are an AI fitness coach. Use the following summary only:\n"
@@ -375,12 +391,24 @@ def show_coach(dataframes,supabase_client):
             f"Context:\n"
             f"{context}\n\n"
             f"Give a concise, helpful, and complete answer. If any context is missing, use common knowledge and if its personal data that is missing, ignore that request and proceed regardless"
+            f"For broader and bigger context based request, make your answer bigger and detailed"
+            f"If found, show and explain any noticable outliers or interesting bits from the context data, and provide insights for it"
         )
         def generate(p):
-            resp = g_client.models.generate_content(
-                model=model,
-                contents=p,
-            )
+            max_retries = 5
+            for attempt in range(max_retries):
+                try:
+                    resp = g_client.models.generate_content(
+                        model=model,
+                        contents=p,
+                    )
+                except Exception as e:
+                    if "503" in str(e):
+                        wait = 2 ** attempt
+                        print(f"Model Overload, retrying in {wait}s...")
+                        time.sleep(wait)
+                    else:
+                        raise e
             return resp.text
 
         reply,speed = measure_speed(generate,final_prompt)
@@ -409,7 +437,7 @@ def show_coach(dataframes,supabase_client):
 
         # Generate AI message
         with st.chat_message("assistant"):
-            ai_reply = call_ai(prompt,dataframes)
+            ai_reply = call_ai(prompt,dfs)
             st.markdown(ai_reply, unsafe_allow_html=True)
         st.write("")  # spacer between chat and input box
 
