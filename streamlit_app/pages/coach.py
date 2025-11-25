@@ -9,6 +9,7 @@ from dateparser.search import search_dates
 import re
 from datetime import datetime
 import pandas as pd
+import json
 
 def show_coach(df_stress,df_hr,df_spo2,df_steps,df_calorie,df_exercise,df_exercise_routine,df_custom_exercise,df_inbuilt_exercises,supabase_client):
     load_dotenv()
@@ -290,7 +291,6 @@ def show_coach(df_stress,df_hr,df_spo2,df_steps,df_calorie,df_exercise,df_exerci
             target_date = pd.to_datetime(date).date()
             target_iso_year, target_iso_week, _ = target_date.isocalendar()
         for table_name, table in dfs.items():
-            print(table_name)
             if type == "range":
                 df_filtered = table[(table["start_time"] >= start_date) & (table["start_time"] <= end_date)]
             elif type == "day":
@@ -357,8 +357,21 @@ def show_coach(df_stress,df_hr,df_spo2,df_steps,df_calorie,df_exercise,df_exerci
                     # now fetch all the entries matching this dates month
                     filtered_dfs = filter_df(specified_dfs,"month",date=value) 
         final_dfs = filtered_dfs  
-        print(final_dfs)
         return final_dfs 
+
+    def jsonify_dfs(dfs):
+        result = {}
+
+        for name, df in dfs.items():
+            clean_df = df.copy()
+
+            for col in clean_df.columns:
+                if pd.api.types.is_datetime64_any_dtype(clean_df[col]):
+                    clean_df[col] = clean_df[col].astype(str)
+            result[name] = clean_df.to_dict(orient= "records")
+
+        json_str = json.dumps(result, indent = 4)
+        return json_str
 
 
     def get_fitness_context(prompt,dataframes):                
@@ -366,9 +379,21 @@ def show_coach(df_stress,df_hr,df_spo2,df_steps,df_calorie,df_exercise,df_exerci
         # print(tables, "\n", phrase_date_pair)
         cleaned_dfs = clean_raw_df(dataframes)
         context_data = fetch_dfs(cleaned_dfs,prompt,tables,phrase_date_pair)
-        print(context_data)
-        return context_data
+        jsoned_data = jsonify_dfs(context_data)
+        print(jsoned_data)
+        return jsoned_data
     # ------ Token speed ----
+
+    def chat_history_tostr(history,limit = 5):
+        trimmed = history[-limit*2:] # user+assistant
+        history_lines = []
+        for msg in trimmed:
+            if msg["role"] == "user":
+                who = "User"
+            else:
+                who = "Coach"
+            history_lines.append(f"{who}: {msg['content']}")
+        return "\n".join(history_lines)
 
     
     def measure_speed(generate_func, prompt):
@@ -385,15 +410,42 @@ def show_coach(df_stress,df_hr,df_spo2,df_steps,df_calorie,df_exercise,df_exerci
     def call_ai(prompt,dataframes):
         print(prompt)
         context = get_fitness_context(prompt,dataframes)
-        final_prompt = (
-            f"You are an AI fitness coach. Use the following summary only:\n"
-            f"{prompt}\n\n"
-            f"Context:\n"
-            f"{context}\n\n"
-            f"Give a concise, helpful, and complete answer. If any context is missing, use common knowledge and if its personal data that is missing, ignore that request and proceed regardless"
-            f"For broader and bigger context based request, make your answer bigger and detailed"
-            f"If found, show and explain any noticable outliers or interesting bits from the context data, and provide insights for it"
-        )
+        history_str = chat_history_tostr(st.session_state.messages, limit= 5)
+        if not context:
+            final_prompt = (f"""
+                You are an AI fitness coach. 
+                            
+                Conversation so far:
+                {history_str}
+
+                Current user message:
+                {prompt}
+                
+                Give a concise, helpful, and complete answer.
+                For broader and bigger context based request, make your answer bigger and detailed.
+                If found, show and explain any noticable outliers or interesting bits from the context data, and provide insights for it.
+                If any context is missing, use prior chats and prompts to gain context.
+            """
+            )
+        else:
+            final_prompt = (f"""
+                You are an AI fitness coach. 
+                            
+                Conversation so far:
+                {history_str}
+
+                Current user message:
+                {prompt}
+
+                Contenxt data:
+                {context}
+
+                Give a concise, helpful, and complete answer.
+                For broader and bigger context based request, make your answer bigger and detailed.
+                If found, show and explain any noticable outliers or interesting bits from the context data, and provide insights for it.
+                If any context is missing, use prior chats and prompts to gain context.
+            """
+            )
         def generate(p):
             max_retries = 5
             for attempt in range(max_retries):
@@ -443,3 +495,5 @@ def show_coach(df_stress,df_hr,df_spo2,df_steps,df_calorie,df_exercise,df_exerci
 
         # Save assistant message
         st.session_state.messages.append({"role": "assistant", "content": ai_reply})
+        
+    print(st.session_state.messages)
