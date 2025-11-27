@@ -79,7 +79,7 @@ def get_connection(type):
                 user = os.getenv("user"),
                 password = os.getenv("password"),
                 host = os.getenv("host"),
-                port = os.getenv("post")  
+                port = os.getenv("port")  
 
             )
     except Exception as e:
@@ -163,7 +163,7 @@ def run_flow():
         save_feat(data_path)
         run_etl(data_path,conn)
         run_json_sync(json_path)
-        run_healthsync_sync(healthsync_path)
+        # run_healthsync_sync(healthsync_path)
         getEntryCount(TABLE_NAMES_JSON,conn)
 
         # closing the connection of DB

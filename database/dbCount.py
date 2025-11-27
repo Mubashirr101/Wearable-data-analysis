@@ -16,25 +16,38 @@ def get_connection():
         port = os.getenv("PGPORT")        
     )
 
-def getEntryCount(tableNamesListPATH,conn): 
+def getEntryCount(tableNamesListPATH,conn):
     with open(tableNamesListPATH,"r") as f:
         tableNamesList = json.load(f)
-    cursor = conn.cursor()
+
+    try:
+        cursor = conn.cursor()
+    except Exception as e:
+        print(f"[ERROR] DB connection invalid in getEntryCount: {e}")
+        try:
+            conn = get_connection()
+            cursor = conn.cursor()
+        except Exception as e2:
+            print(f"[ERROR] Could not reconnect: {e2}")
+            return
+
     rowcountDict = {}
     timestamp = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
 
     for table in sorted(tableNamesList):
         try:
-            cursor.execute(sql.SQL("SELECT COUNT(*)FROM {}").format(sql.Identifier(table)))
+            cursor.execute(sql.SQL("SELECT COUNT(*) FROM {}").format(sql.Identifier(table)))
             count = cursor.fetchone()[0]
             print(f"Table: {table} has {count} rows.")
             rowcountDict[table] = count
         except Exception as e:
             rowcountDict[table] = f"Error: {str(e)}"
-    cursor.close()
-    # conn.close()
+    try:
+        cursor.close()
+    except Exception:
+        pass
 
-    # reading any saved json file if available
+    # write RowCounts JSON
     filepath = "database/RowCounts.json"
     if os.path.exists(filepath):
         with open(filepath,"r") as f:
@@ -42,11 +55,8 @@ def getEntryCount(tableNamesListPATH,conn):
     else:
         fulldata = {}
 
-    # Adding new rowcount entry
     fulldata[timestamp] = rowcountDict
-    # saving it in json
     with open("database/RowCounts.json","w") as f:
         json.dump(fulldata,f,indent=4)
     print("[SAVED]: No. of rows in this ETL session in RowCounts.json ")
 
-           
