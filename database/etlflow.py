@@ -135,16 +135,17 @@ def run_flow():
         ## connect the DB, 2 options -> local OR supabase
         conn = get_connection("supabase")        
         # ## run scripts
-        # savebackups(BACKUP_PATH)
-        # findnewfiles(FILENAMES_JSON)
-        # save_feat(data_path)
-        # run_etl(data_path,conn)
-        # run_json_sync(json_path)
-        # run_healthsync_sync(healthsync_path)
-        getEntryCount(TABLE_NAMES_JSON,conn)
-
+        savebackups(BACKUP_PATH)
+        findnewfiles(FILENAMES_JSON)
+        save_feat(data_path)
+        run_etl(data_path,conn)
+        run_json_sync(json_path)
+        run_healthsync_sync(healthsync_path)
         # closing the connection of DB
         conn.close()
+        connection = get_connection("supabase")
+        getEntryCount(TABLE_NAMES_JSON,connection)
+        connection.close()
         logging.info("Data pipeline completed successfully.")
 
     except Exception as e:
