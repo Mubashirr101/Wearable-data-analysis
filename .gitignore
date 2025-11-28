@@ -3,7 +3,8 @@ __pycache__
 *.pyc
 *.log
 .vscode/
-data/raw/
+# raw data files
+data/
 .env
 # notebooks/test_Scripts/
 *.bat
