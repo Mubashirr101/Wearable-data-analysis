@@ -2,7 +2,6 @@
 import os
 import sys
 import logging
-from dotenv import load_dotenv
 import psycopg2
 from datetime import datetime
 # ---------------------- PATH SETUP -------------------------- #
@@ -11,34 +10,12 @@ PARENT_DIR = os.path.dirname(CURRENT_DIR)
 sys.path.append(PARENT_DIR)
 
 # ---------------------- LOGGING SETUP ----------------------- #
-LOG_DIR = "logs"
-timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-LOG_FILE = os.path.join(LOG_DIR, f"etl_{timestamp}.log")
+from backend.services.logger_setup import setup_logging
+logger = setup_logging()
 
-
-os.makedirs(LOG_DIR, exist_ok=True)
-
-# Create logger
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
-
-# Formatter
-formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s", "%Y-%m-%d %H:%M:%S")
-
-# File handler
-file_handler = logging.FileHandler(LOG_FILE, mode="a", encoding="utf-8")
-file_handler.setFormatter(formatter)
-logger.addHandler(file_handler)
-
-# Console handler
-console_handler = logging.StreamHandler(sys.stdout)
-console_handler.setFormatter(formatter)
-logger.addHandler(console_handler)
-
-# Redirect print() → logging.info()
-print = lambda *args, **kwargs: logger.info(" ".join(str(a) for a in args))
 
 # ---------------------- IMPORTING MODULES ----------------------------- #
+from dotenv import load_dotenv
 from backend.services.datasetFiltering import savebackups, findnewfiles
 from backend.services.datasetExploration import save_feat
 from connectNsyncDB import run_etl
@@ -158,13 +135,13 @@ def run_flow():
         ## connect the DB, 2 options -> local OR supabase
         conn = get_connection("supabase")        
         ## run scripts
-        savebackups(BACKUP_PATH)
+        # savebackups(BACKUP_PATH)
         findnewfiles(FILENAMES_JSON)
-        save_feat(data_path)
-        run_etl(data_path,conn)
-        run_json_sync(json_path)
+        # save_feat(data_path)
+        # run_etl(data_path,conn)
+        # run_json_sync(json_path)
         # run_healthsync_sync(healthsync_path)
-        getEntryCount(TABLE_NAMES_JSON,conn)
+        # getEntryCount(TABLE_NAMES_JSON,conn)
 
         # closing the connection of DB
         conn.close()

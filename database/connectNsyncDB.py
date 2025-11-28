@@ -10,7 +10,9 @@ from datetime import datetime
 from dotenv import load_dotenv
 load_dotenv()
 # path = os.getenv("DATA_PATH")
-    
+from backend.services.logger_setup import setup_logging
+logger = setup_logging()
+
 # Creating new database
 def createNewDB():
     # connecting with the adminDB to create new db since Postgre doesnt allow connecting to non existing DB

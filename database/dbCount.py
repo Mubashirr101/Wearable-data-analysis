@@ -6,6 +6,8 @@ import pandas as pd
 from psycopg2 import sql
 import json
 load_dotenv()
+from backend.services.logger_setup import setup_logging
+logger = setup_logging()
 
 def get_connection():
     return psycopg2.connect(

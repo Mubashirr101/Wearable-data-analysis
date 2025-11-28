@@ -2,6 +2,8 @@ from supabase import create_client, Client
 import os
 from dotenv import load_dotenv
 from storage3.exceptions import StorageApiError
+from backend.services.logger_setup import setup_logging
+logger = setup_logging()
 
 
 def run_json_sync(json_dir):

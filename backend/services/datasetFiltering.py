@@ -5,6 +5,8 @@ import re
 import json
 from dotenv import load_dotenv
 load_dotenv()
+from backend.services.logger_setup import setup_logging
+logger = setup_logging()
 
 # Filtering and Understanding how the 
 # data files are stored and updated in the SH app export

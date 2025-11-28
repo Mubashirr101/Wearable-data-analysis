@@ -5,6 +5,8 @@ import re
 import json
 from dotenv import load_dotenv
 load_dotenv()
+from backend.services.logger_setup import setup_logging
+logger = setup_logging()
 
 # Exploring Datasets (CSVs) and Understanding their Features
 # path = os.getenv("DATA_PATH")
