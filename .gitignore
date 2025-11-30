@@ -5,7 +5,6 @@ __pycache__
 .vscode/
 # raw data files
 data/
-data/logs
 .env
 # notebooks/test_Scripts/
 *.bat

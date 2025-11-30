@@ -4036,5 +4036,23 @@
         "user_profile": 22,
         "water_intake": 41,
         "weight": 7
+    },
+    "2025-11-30T15:26:22": {
+        "activity_day_summary": 169,
+        "badge": 36,
+        "calories_burned_details": 169,
+        "device_profile": 4,
+        "exercise": 388,
+        "exercise_periodization_training_program": 1,
+        "exercise_periodization_training_schedule": 1,
+        "hsp_references": 2104,
+        "preferences": 181,
+        "service_preferences": 15,
+        "social_service_status": 4,
+        "step_daily_trend": 391,
+        "tracker_floors_day_summary": 32,
+        "tracker_pedometer_day_summary": 391,
+        "tracker_pedometer_step_count": 19407,
+        "user_profile": 22
     }
 }
