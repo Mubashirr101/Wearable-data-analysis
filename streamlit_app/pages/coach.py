@@ -370,7 +370,7 @@ def show_coach(df_stress,df_hr,df_spo2,df_steps,df_calorie,df_exercise,df_exerci
                     clean_df[col] = clean_df[col].astype(str)
             result[name] = clean_df.to_dict(orient= "records")
 
-        json_str = json.dumps(result, indent = 4)
+        json_str = json.dumps(result,separators=(',', ':'))
         return json_str
 
 
@@ -407,66 +407,100 @@ def show_coach(df_stress,df_hr,df_spo2,df_steps,df_calorie,df_exercise,df_exerci
         return reply, tok_per_sec
     
     # ---- LLM CALL ----
-    def call_ai(prompt,dataframes):
+    def call_ai(prompt, dataframes):
         print(prompt)
-        context = get_fitness_context(prompt,dataframes)
-        history_str = chat_history_tostr(st.session_state.messages, limit= 5)
+        context = get_fitness_context(prompt, dataframes)
+        history_str = chat_history_tostr(st.session_state.messages, limit=5)
+
         if not context:
-            final_prompt = (f"""
-                You are an AI fitness coach. 
-                            
+            final_prompt = f"""
+                You are an AI fitness coach.
+
                 Conversation so far:
                 {history_str}
 
                 Current user message:
                 {prompt}
-                
+
                 Give a concise, helpful, and complete answer.
-                For broader and bigger context based request, make your answer bigger and detailed.
-                If found, show and explain any noticable outliers or interesting bits from the context data, and provide insights for it.
-                If any context is missing, use prior chats and prompts to gain context.
-            """
-            )
+                """
         else:
-            final_prompt = (f"""
-                You are an AI fitness coach. 
-                            
+            final_prompt = f"""
+                You are an AI fitness coach.
+
                 Conversation so far:
                 {history_str}
 
                 Current user message:
                 {prompt}
 
-                Contenxt data:
+                Context data:
                 {context}
 
-                Give a concise, helpful, and complete answer.
-                For broader and bigger context based request, make your answer bigger and detailed.
-                If found, show and explain any noticable outliers or interesting bits from the context data, and provide insights for it.
-                If any context is missing, use prior chats and prompts to gain context.
-            """
-            )
-        def generate(p):
+                Give a concise, helpful, and complete answer. 
+                Explain any noticeable outliers or patterns using the context.
+                """
+
+        # --------------------------
+        # GOOGLE GENAI CALL
+        # --------------------------
+        def google_generate(prompt):
             max_retries = 5
             for attempt in range(max_retries):
                 try:
                     resp = g_client.models.generate_content(
                         model=model,
-                        contents=p,
+                        contents=prompt,
                     )
+                    return resp.text
                 except Exception as e:
                     if "503" in str(e):
                         wait = 2 ** attempt
-                        print(f"Model Overload, retrying in {wait}s...")
+                        print(f"Gemini Overload. Retrying in {wait}s...")
                         time.sleep(wait)
                     else:
                         raise e
-            return resp.text
 
-        reply,speed = measure_speed(generate,final_prompt)
+        reply, speed = measure_speed(google_generate, final_prompt)
 
+        # --------------------------
+        # CHECK SPEED — IF TOO SLOW → SWITCH TO OPENROUTER
+        # --------------------------
+        SPEED_THRESHOLD = 2.0  # tok/sec
+
+        if speed < SPEED_THRESHOLD:
+            print(f"Speed {speed:.1f} tok/s is slow → switching to OpenRouter...")
+
+            import requests
+
+            OR_KEY = os.getenv("openrouter_key")
+            OR_MODEL = os.getenv("openrouter_model")
+
+            def openrouter_generate(prompt):
+                url = "https://openrouter.ai/api/v1/chat/completions"
+                headers = {
+                    "Authorization": f"Bearer {OR_KEY}",
+                    "Content-Type": "application/json"
+                }
+                payload = {
+                    "model": OR_MODEL,
+                    "messages": [{"role": "user", "content": prompt}],
+                    "temperature": 0.7
+                }
+                r = requests.post(url, headers=headers, json=payload, timeout=40)
+                r.raise_for_status()
+                return r.json()["choices"][0]["message"]["content"]
+
+            reply_or, speed_or = measure_speed(openrouter_generate, final_prompt)
+            reply = reply_or
+            speed = speed_or
+
+        # --------------------------
+        # ADD SPEED TAG
+        # --------------------------
         reply += f"\n\n<sub><sup><span style='color:#999;'>~{speed:.1f} tok/s</span></sup></sub>"
         return reply
+
 
     # ---- SESSION MEMORY ----
     if "messages" not in st.session_state:

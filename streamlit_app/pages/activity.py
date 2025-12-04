@@ -116,7 +116,8 @@ def loadWorkoutimages(workout_types, workout_name, supabase,is_svg = False):
     file_data = None
     found_path = None
     for workout_type in workout_types:
-        file_path = f"{workout_type}/{workout_name.replace(" ","-").lower()}"
+        # use single quotes inside replace to avoid f-string syntax issues
+        file_path = f"{workout_type}/{workout_name.replace(' ', '-').lower()}"
         for attempt in range(retries):
             try:
                 file_data = supabase.storage.from_(bucket_name).download(file_path)
@@ -150,7 +151,7 @@ def loadWorkoutimages(workout_types, workout_name, supabase,is_svg = False):
         img = Image.open(io.BytesIO(file_data))
         return "img", img
     except Exception as e:
-        st.error(f"❌ Unable to open image: {str(e)}")
+        # don't call st.error here (can break headless runs), just return None so caller can handle gracefully
         return None, None
 
 
@@ -280,9 +281,15 @@ def show_activity(df_exercise,df_exercise_routine,df_custom_exercise,df_inbuilt_
                 for types in workout_types:                    
                     img_type, img_data = loadWorkoutimages(workout_types, types.lower() , supabase_client, is_svg= True)
                     if img_type == "svg":
-                        details_container.markdown(img_data, unsafe_allow_html=True)
+                            if img_data:
+                                details_container.markdown(img_data, unsafe_allow_html=True)
+                            else:
+                                details_container.caption("Image not available")
                     else:
-                        details_container.image(img_data)
+                            if img_data:
+                                details_container.image(img_data)
+                            else:
+                                details_container.caption("Image not available")
               
 
 
@@ -386,6 +393,8 @@ def show_activity(df_exercise,df_exercise_routine,df_custom_exercise,df_inbuilt_
                                     single_container.markdown(img_data, unsafe_allow_html=True)
                                 else:
                                     single_container.image(img_data)
+                            else:
+                                single_container.caption("Image not available")
                         c1,c2,c3,c4,c5 = single_container.columns(5)                
                         if workout_duration:
                             c1.markdown(f"{workout_duration}")
@@ -732,14 +741,17 @@ def show_activity(df_exercise,df_exercise_routine,df_custom_exercise,df_inbuilt_
 
             # Filter files by activity type, date, and file type
             matching_files = []
-            expected_prefix = f"{type}-{formatted_date}"  
+            expected_prefixes = []
+            for types in type:
+                expected_prefixes.append(f"{types}-{formatted_date}")
             file_extension = f".{file_type.lower()}"
 
             for file in all_files:
                 file_name = file['name']
-                if (file_name.startswith(expected_prefix) and 
-                    file_name.lower().endswith(file_extension)):
-                    matching_files.append(file_name)
+                for prefix in expected_prefixes:
+                    if (file_name.startswith(prefix) and 
+                        file_name.lower().endswith(file_extension)):
+                        matching_files.append(file_name)
 
             if not matching_files:
                 return []
@@ -793,12 +805,12 @@ def show_activity(df_exercise,df_exercise_routine,df_custom_exercise,df_inbuilt_
                 key="outdoor_activity_file_type"
             )
         
-        outdoor_activity_type = 'WALKING'
+        outdoor_activity_types = ['WALKING','HIKING']
         
         # Load files based on selected date and file type
         if outdoor_activity_calender:
             mapfiles = loadMapfiles(
-                outdoor_activity_type, 
+                outdoor_activity_types, 
                 outdoor_activity_calender, 
                 outdoor_activity_file_type, 
                 supabase_client
