@@ -2,10 +2,14 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import altair as alt
+import time
+from collections import Counter
 
 def clean_raw_df(raw_dataframes):
     df = raw_dataframes
     for key, value in df.items():
+        if key == 'steps':
+            continue
         value = value.loc[:,~value.columns.str.contains("start_time")]
         value = value.loc[:,~value.columns.str.contains("time_offset")]
         value = value.loc[:,~value.columns.str.contains("jsonPath")]
@@ -26,23 +30,44 @@ def filter_dfs(dfs):
     filtered_dfs = {}
     latest_dates = []
     for table_name, table in dfs.items():
-        latest_dates.append(table['start_time'].max())
-        print(table_name,table['start_time'].max())
-    print(latest_dates)
+        if 'day_time' in table.columns:
+            table.loc[:, 'day_time'] = pd.to_datetime(table['day_time'], unit='ms').dt.normalize()
+            latest_dates.append(table['day_time'].max())
+        else:
+            latest_dates.append(table['start_time'].max())
 
+    # which latest date is the majority in the tables, that dates week will be shown
+    majority_date = Counter(latest_dates).most_common(1)[0]
+    target_date = majority_date[0]
+    target_iso_year, target_iso_week, _ = target_date.isocalendar()   
+    for table_name, table in dfs.items() :
+        if 'day_time' in table.columns:
+            df_filtered = table[(table["day_time"].dt.isocalendar().year == target_iso_year) & (table["day_time"].dt.isocalendar().week == target_iso_week)]        
+            df_filtered = df_filtered.sort_values(by='day_time',ascending = True)
+        else:
+            df_filtered = table[(table["start_time"].dt.isocalendar().year == target_iso_year) & (table["start_time"].dt.isocalendar().week == target_iso_week)]        
+            df_filtered = df_filtered.sort_values(by='start_time',ascending = True)
+        
+        filtered_dfs[table_name] = df_filtered
     return filtered_dfs
 
-def show_home(df_hr,df_steps,df_calorie,supabase_client):        
+
+
+def show_home(df_hr,df_steps_daily,df_calorie,supabase_client):        
     
     ####################################################3
     ## data fetching
+    ## only combined step count is used from both devices (both phone and watch)
+    df_steps_daily = df_steps_daily[df_steps_daily['deviceuuid'] == 'VfS0qUERdZ']
     dfs ={
         'hr':df_hr,
-        'steps':df_steps,
+        'steps':df_steps_daily[['day_time','count']],
         'calorie':df_calorie
     }
+    
     cleaned_dfs = clean_raw_df(dfs)
-    filtered_dfs = filter_dfs(cleaned_dfs)
+    filtered_dfs = filter_dfs(dfs)
+    print(filtered_dfs['steps'])
 
 
 
@@ -51,10 +76,9 @@ def show_home(df_hr,df_steps,df_calorie,supabase_client):
 
     ###########################################333
     # Fake placeholder data
-    steps_data = pd.DataFrame({
-    "Day": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
-    "Steps": [4500, 7200, 6800, 8200, 10400, 9500, 5000]
-    })
+    steps_data = filtered_dfs['steps']
+    steps_data['weekday'] = steps_data['day_time'].dt.day_name().str[:3]
+
 
 
     goals = {
@@ -128,15 +152,25 @@ def show_home(df_hr,df_steps,df_calorie,supabase_client):
             hravgContainer = st.container(border=True)   
             hravgContainer.metric(label='❤️ HR (avg)',value='72 bpm',delta='+5')
         
+        
+        weekday_order = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+        full_week = pd.DataFrame({'weekday': weekday_order})
+        weekly_steps = full_week.merge(
+            steps_data[['weekday','count']], 
+            on = 'weekday',
+            how='left'
+        )
+        weekly_steps['count'] = weekly_steps['count'].fillna(0)
+
         stepstrendsContainer = st.container(border=True)
         stepstrendsContainer.subheader('📊Steps Trend (Weekly)')
         steps_chart = (
-            alt.Chart(steps_data)
+            alt.Chart(weekly_steps)
                 .mark_line(point=True)
                 .encode(
-                    x='Day',
-                    y='Steps',
-                    tooltip = ['Day','Steps']
+                    x=alt.X('weekday',sort=weekday_order,title='Day',axis=alt.Axis(labelAngle=0) ),
+                    y=alt.Y('count',title='Steps'),
+                    tooltip = ['weekday','count']
                 )
                 .interactive()
         )

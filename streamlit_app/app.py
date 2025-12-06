@@ -110,9 +110,14 @@ METRICS_CONFIG = {
         "jsonPath_template": "com.samsung.shealth.exercise.custom_exercise/{0}/{1}",                
     },
     "inbuilt_exercises": {
-    "table": "inbuilt_exercises",
-    "columns":["exercise_type","exercise_name"],
-    "jsonPath_template" : ""
+        "table": "inbuilt_exercises",
+        "columns":["exercise_type","exercise_name"],
+        "jsonPath_template" : ""
+    },
+    "step_daily_trend": {
+        "table": "step_daily_trend",
+        "columns": ["create_time","day_time","count","speed","distance","calorie","deviceuuid","binning_data"],
+        "jsonPath_template": "com.samsung.shealth.step_daily_trend/{0}/{1}"
     }
 }
 
@@ -185,6 +190,7 @@ def warmup():
         # Exercise
         elif metric == "exercise" and "exercise_time_offset" in df.columns and "exercise_start_time" in df.columns:
             df["localized_time"] = df.apply(lambda r: apply_offset(r, "exercise_time_offset", "exercise_start_time"), axis=1)
+      
         # -----------------------------------------------------
 
         dataframes[metric] = df
@@ -232,7 +238,7 @@ class App:
         functions = {
             'Home': lambda: pg.show_home(
                 self.dataframes.get("hr"),
-                self.dataframes.get("steps"),
+                self.dataframes.get("step_daily_trend"),
                 self.dataframes.get("calorie"),
                 self.supabase_client
 
