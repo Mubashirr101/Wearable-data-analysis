@@ -230,7 +230,6 @@ def show_activity(df_exercise,df_exercise_routine,df_custom_exercise,df_inbuilt_
                             for i2, row2 in df_custom_exercise.iterrows():
                                 if row2.get('custom_id') == row.get('custom_id'):
                                     workout_routine_name = row2.get('custom_name')                                    
-                
                 # Finding workout types from the routine name                       
                 workout_types = []
                 if '&' in workout_routine_name:
@@ -267,8 +266,15 @@ def show_activity(df_exercise,df_exercise_routine,df_custom_exercise,df_inbuilt_
                         no_of_exercise += 1                       
                     elif row.get('activity_type') not in [10,40,50]:
                         # if its not warmup or break or cooldown
-                        no_of_exercise += 1            
+                        no_of_exercise += 1  
 
+
+                inbuilt_map = dict(zip(df_inbuilt_exercises['exercise_type'], df_inbuilt_exercises['exercise_name']))
+                custom_map = dict(zip(df_custom_exercise['custom_id'], df_custom_exercise['custom_name']))
+
+                if no_of_exercise == 1:
+                    for i , row in daily_exercises.iterrows():
+                        workout_routine_name = inbuilt_map.get(row.get('exercise_exercise_type'))   
                 details_container = st.container(border=True)  
                 details_container.markdown(f"#### {workout_routine_name}")                
                 detail_c1,detail_c2,detail_c3,detail_c4,detail_c5,detail_c6 = details_container.columns(6,vertical_alignment="top")              
@@ -277,7 +283,8 @@ def show_activity(df_exercise,df_exercise_routine,df_custom_exercise,df_inbuilt_
                 detail_c3.markdown(f"##### Calories 🔥 \n {burned_cals:.0f} kcals")
                 detail_c4.markdown(f"##### Max HR 🫀 \n {max_hr:.0f} bpm")
                 detail_c5.markdown(f"##### Avg HR 🫀 \n {mean_hr:.0f} bpm")
-                detail_c6.markdown(f"##### Min HR 🫀 \n {min_hr:.0f} bpm") 
+                detail_c6.markdown(f"##### Min HR 🫀 \n {min_hr:.0f} bpm")  
+                # routine images  (muscles hit)
                 for types in workout_types:                    
                     img_type, img_data = loadWorkoutimages(workout_types, types.lower() , supabase_client, is_svg= True)
                     if img_type == "svg":
@@ -292,19 +299,18 @@ def show_activity(df_exercise,df_exercise_routine,df_custom_exercise,df_inbuilt_
                                 details_container.caption("Image not available")
               
 
-
+             
 
                 ## Workout flow (warmups n cooldowns in separate blocks, breaks in small gaps between exercises
                 with st.expander(f"Workout Routine:"):
-                    activity_count = 0
+                    activity_count = 0 
+                    if no_of_exercise != 1:                   
+                        warmup_container = st.container(border=True)                                          
 
-                    
-
-                    warmup_container = st.container(border=True)                                          
                     exercises_container = st.container(border=True)    
-                    cooldown_container = st.container(border=True) 
-                    inbuilt_map = dict(zip(df_inbuilt_exercises['exercise_type'], df_inbuilt_exercises['exercise_name']))
-                    custom_map = dict(zip(df_custom_exercise['custom_id'], df_custom_exercise['custom_name']))
+                    if no_of_exercise != 1:                                       
+                        cooldown_container = st.container(border=True) 
+                   
                     for i, row in daily_exercises.iterrows():
                         workout_name = None
                         activity_type = row.get('activity_type')

@@ -230,7 +230,13 @@ class App:
         page = st_navbar(pages, logo_path=logo_path, styles=styles, urls=urls, options=options)
 
         functions = {
-            'Home': pg.show_home,
+            'Home': lambda: pg.show_home(
+                self.dataframes.get("hr"),
+                self.dataframes.get("steps"),
+                self.dataframes.get("calorie"),
+                self.supabase_client
+
+            ),
             'Dashboard': lambda: pg.show_dashboard(
                 self.dataframes.get("stress"),
                 self.dataframes.get("hr"),

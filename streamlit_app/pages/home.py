@@ -3,8 +3,53 @@ import pandas as pd
 import numpy as np
 import altair as alt
 
-def show_home():        
+def clean_raw_df(raw_dataframes):
+    df = raw_dataframes
+    for key, value in df.items():
+        value = value.loc[:,~value.columns.str.contains("start_time")]
+        value = value.loc[:,~value.columns.str.contains("time_offset")]
+        value = value.loc[:,~value.columns.str.contains("jsonPath")]
+        value = value.loc[:,~value.columns.str.contains("binning")]
+        value = value.loc[:,~value.columns.str.contains("uuid")]
+        value = value.loc[:,~value.columns.str.contains("live_data")]
+        
+
+        value = value.rename(columns= lambda c: "start_time" if "localized_time" in c else c)
+        cols = value.columns.tolist()
+        if "start_time" in cols:
+            cols.insert(0, cols.pop(cols.index("start_time")))
+            value = value[cols]
+        df[key] = value
     
+    return df
+def filter_dfs(dfs):
+    filtered_dfs = {}
+    latest_dates = []
+    for table_name, table in dfs.items():
+        latest_dates.append(table['start_time'].max())
+        print(table_name,table['start_time'].max())
+    print(latest_dates)
+
+    return filtered_dfs
+
+def show_home(df_hr,df_steps,df_calorie,supabase_client):        
+    
+    ####################################################3
+    ## data fetching
+    dfs ={
+        'hr':df_hr,
+        'steps':df_steps,
+        'calorie':df_calorie
+    }
+    cleaned_dfs = clean_raw_df(dfs)
+    filtered_dfs = filter_dfs(cleaned_dfs)
+
+
+
+
+
+
+    ###########################################333
     # Fake placeholder data
     steps_data = pd.DataFrame({
     "Day": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
