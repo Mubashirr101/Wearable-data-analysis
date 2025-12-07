@@ -228,7 +228,7 @@ class App:
         # Navigation
         pages = ["Dashboard", "Activity", "Coach", "More", "Github"]
         parent_dir = os.path.dirname(os.path.abspath(__file__))
-        logo_path = os.path.join(parent_dir, "home_light.svg")
+        logo_path = os.path.join(parent_dir, "home_dark.svg")
         urls = {"Github": "https://github.com/Mubashirr101/Wearable-data-analysis"}
         styles = {'nav': {'background-color':'#2E3847','justify-content':'left','margin-bottom':'1px'}}
         options = {'show_menu': False, 'show_sidebar': False}

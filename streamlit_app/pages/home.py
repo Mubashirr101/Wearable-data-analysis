@@ -24,34 +24,62 @@ def clean_raw_df(raw_dataframes):
             cols.insert(0, cols.pop(cols.index("start_time")))
             value = value[cols]
         df[key] = value
-    
     return df
 def filter_dfs(dfs):
     filtered_dfs = {}
     latest_dates = []
     for table_name, table in dfs.items():
-        if 'day_time' in table.columns:
-            table.loc[:, 'day_time'] = pd.to_datetime(table['day_time'], unit='ms').dt.normalize()
-            latest_dates.append(table['day_time'].max())
+        tbl = table.copy()
+        # normlizing day_time/start_time safely only if not already datetime
+        if 'day_time' in tbl.columns:
+            tbl['day_time'] = pd.to_datetime(tbl['day_time'], unit='ms',errors='coerce')            
+            tbl['day_time'] = tbl['day_time'].dt.normalize()
+            latest_dates.append(tbl['day_time'].max())            
         else:
-            latest_dates.append(table['start_time'].max())
+            # ensureing start time exists and it datetime
+            if not pd.api.types.is_datetime64_any_dtype(tbl['start_time']):
+                tbl['start_time']  = pd.to_datetime(tbl['start_time'],errors = 'coerce')
+                tbl['start_time'] = tbl['start_time'].dt.normalize()
+            else:
+                tbl['start_time']  = pd.to_datetime(tbl['start_time'],errors = 'coerce')
+                tbl['start_time'] = tbl['start_time'].dt.normalize()
+            latest_dates.append(tbl['start_time'].max())
+
+        dfs[table_name] = tbl
+
+
+    # guard against empty datasets having NaT
+    valid_dates = []
+    for d in latest_dates:
+        if pd.notna(d):
+            valid_dates.append(d)
+    if not valid_dates:
+        # return empty data frames if noting valid        
+        return {k:v.iloc[0:0].copy() for k,v in dfs.items()}
 
     # which latest date is the majority in the tables, that dates week will be shown
     majority_date = Counter(latest_dates).most_common(1)[0]
     target_date = majority_date[0]
     target_iso_year, target_iso_week, _ = target_date.isocalendar()   
     for table_name, table in dfs.items() :
-        if 'day_time' in table.columns:
-            df_filtered = table[(table["day_time"].dt.isocalendar().year == target_iso_year) & (table["day_time"].dt.isocalendar().week == target_iso_week)]        
-            df_filtered = df_filtered.sort_values(by='day_time',ascending = True)
+        tbl = table.copy()
+        if 'day_time' in tbl.columns:
+            mask = (tbl["day_time"].dt.isocalendar().year == target_iso_year) & (tbl["day_time"].dt.isocalendar().week == target_iso_week)
+            df_filtered = tbl.loc[mask].sort_values(by='day_time',ascending = True).copy()
         else:
-            df_filtered = table[(table["start_time"].dt.isocalendar().year == target_iso_year) & (table["start_time"].dt.isocalendar().week == target_iso_week)]        
-            df_filtered = df_filtered.sort_values(by='start_time',ascending = True)
+            mask = (tbl["start_time"].dt.isocalendar().year == target_iso_year) & (tbl["start_time"].dt.isocalendar().week == target_iso_week)
+            df_filtered = tbl.loc[mask].sort_values(by='start_time',ascending = True).copy()
         
         filtered_dfs[table_name] = df_filtered
     return filtered_dfs
 
+def summarize_days(dfs):
+    for key, table in dfs.items():
+        if key == 'steps':
+            continue
 
+        
+    
 
 def show_home(df_hr,df_steps_daily,df_calorie,supabase_client):        
     
@@ -60,27 +88,30 @@ def show_home(df_hr,df_steps_daily,df_calorie,supabase_client):
     ## only combined step count is used from both devices (both phone and watch)
     df_steps_daily = df_steps_daily[df_steps_daily['deviceuuid'] == 'VfS0qUERdZ']
     dfs ={
-        'hr':df_hr,
+        'hr':df_hr[['heart_rate_start_time','heart_rate_heart_rate','heart_rate_min','heart_rate_max','localized_time']],
         'steps':df_steps_daily[['day_time','count']],
         'calorie':df_calorie
     }
     
     cleaned_dfs = clean_raw_df(dfs)
-    filtered_dfs = filter_dfs(dfs)
-    print(filtered_dfs['steps'])
+    filtered_dfs = filter_dfs(cleaned_dfs) 
 
-
+    print(filtered_dfs['hr'])
+    summarize_days(filtered_dfs)
 
 
 
 
     ###########################################333
+    steps_data = filtered_dfs['steps'].copy()
+    if not steps_data.empty and 'day_time' in steps_data.columns:
+        steps_data = steps_data.reset_index(drop = True)
+        steps_data.loc[:,'weekday'] = steps_data['day_time'].dt.day_name().str[:3]
+    else:
+        steps_data['weekday'] = []
+
+
     # Fake placeholder data
-    steps_data = filtered_dfs['steps']
-    steps_data['weekday'] = steps_data['day_time'].dt.day_name().str[:3]
-
-
-
     goals = {
     "Steps": "10,000 / 12,000",
     "Sleep": "7.5 / 8 hrs",
@@ -156,12 +187,14 @@ def show_home(df_hr,df_steps_daily,df_calorie,supabase_client):
         weekday_order = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
         full_week = pd.DataFrame({'weekday': weekday_order})
         weekly_steps = full_week.merge(
-            steps_data[['weekday','count']], 
+            steps_data[['weekday','day_time','count']], 
             on = 'weekday',
             how='left'
         )
         weekly_steps['count'] = weekly_steps['count'].fillna(0)
-
+        # filling dates if na
+        week_start = steps_data['day_time'].min().normalize()
+        weekly_steps['day_time'] = pd.date_range(start=week_start,periods=7,freq='D')
         stepstrendsContainer = st.container(border=True)
         stepstrendsContainer.subheader('📊Steps Trend (Weekly)')
         steps_chart = (
@@ -170,7 +203,10 @@ def show_home(df_hr,df_steps_daily,df_calorie,supabase_client):
                 .encode(
                     x=alt.X('weekday',sort=weekday_order,title='Day',axis=alt.Axis(labelAngle=0) ),
                     y=alt.Y('count',title='Steps'),
-                    tooltip = ['weekday','count']
+                    tooltip = [
+                        alt.Tooltip('day_time:T',title = 'Date'),
+                        alt.Tooltip('count:Q',title='Steps')
+                    ]
                 )
                 .interactive()
         )
