@@ -182,7 +182,7 @@ def show_charts(df: pd.DataFrame):
                 .encode(x="index", y=alt.Y(vital, title=vital))
                 .properties(width="container", height=200, title=vital)
             )
-            st.altair_chart(chart, use_container_width=True)
+            st.altair_chart(chart, width='stretch')
 
 # -------------------
 # Main App

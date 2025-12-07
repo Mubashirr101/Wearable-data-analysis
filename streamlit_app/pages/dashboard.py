@@ -56,7 +56,7 @@ def render_metric_tab(tab, metric_name, df, config, supabase_client=None):
             f"{config['title']} over Time",
             chart_type=chart_type_map.get(metric_name, "line")
         )
-        st.altair_chart(chart_daily, use_container_width=True)
+        st.altair_chart(chart_daily, width='stretch')
 
         # ----------  Adv Chart ----------
         adv_chart_displayed = False
@@ -120,7 +120,7 @@ def render_metric_tab(tab, metric_name, df, config, supabase_client=None):
                             color=alt.Color("type:N"),
                             tooltip=[config["localized_time"], alt.Tooltip("type:N"), alt.Tooltip("count:Q")]
                         ).properties(title="Run vs Walk counts per day")
-                        r1c1.altair_chart(stacked, use_container_width=True)
+                        r1c1.altair_chart(stacked, width='stretch')
                     else:
                         r1c1.info("run_step / walk_step not available in this dataset")
 
@@ -139,7 +139,7 @@ def render_metric_tab(tab, metric_name, df, config, supabase_client=None):
                         rolling = steps_line.mark_line(strokeDash=[4,4], color="black").encode(
                             y=alt.Y("rolling_3h:Q", title="Rolling mean")
                         )
-                        r1c2.altair_chart((line + rolling).properties(title="Steps over time (hourly) with rolling mean"), use_container_width=True)
+                        r1c2.altair_chart((line + rolling).properties(title="Steps over time (hourly) with rolling mean"), width='stretch')
                     else:
                         r1c2.info("Not enough time series data for rolling chart.")
 
@@ -152,7 +152,7 @@ def render_metric_tab(tab, metric_name, df, config, supabase_client=None):
                             color=alt.Color("run_step:N", title="Run vs Walk") if "run_step" in df_steps.columns else alt.value("steelblue"),
                             tooltip=[config["localized_time"], "step_count_speed", "step_count_distance", config["value"]]
                         ).interactive().properties(title="Speed vs Distance (points colored by run_step if available)")
-                        r2c1.altair_chart(scatter, use_container_width=True)
+                        r2c1.altair_chart(scatter, width='stretch')
                     else:
                         r2c1.info("Speed/distance data not available.")
 
@@ -162,7 +162,7 @@ def render_metric_tab(tab, metric_name, df, config, supabase_client=None):
                         y=alt.Y("count()", title="Frequency"),
                         tooltip=[alt.Tooltip(f"{config['value']}:Q")]
                     ).properties(title="Distribution of Step Counts")
-                    r2c2.altair_chart(hist, use_container_width=True)
+                    r2c2.altair_chart(hist, width='stretch')
 
                     # Row 3: boxplot calories and scatter steps vs calories
                     r3c1, r3c2 = st.columns(2)
@@ -171,7 +171,7 @@ def render_metric_tab(tab, metric_name, df, config, supabase_client=None):
                             x=alt.X("step_count_calorie:Q", title="Calories"),
                             tooltip=["step_count_calorie"]
                         ).properties(title="Calories distribution")
-                        r3c1.altair_chart(box, use_container_width=True)
+                        r3c1.altair_chart(box, width='stretch')
                     else:
                         r3c1.info("Calories not available.")
 
@@ -181,7 +181,7 @@ def render_metric_tab(tab, metric_name, df, config, supabase_client=None):
                             y=alt.Y("step_count_calorie", title="Calories"),
                             tooltip=[config["localized_time"], config["value"], "step_count_calorie"]
                         ).properties(title="Steps vs Calories")
-                        r3c2.altair_chart(scatter2, use_container_width=True)
+                        r3c2.altair_chart(scatter2, width='stretch')
                     else:
                         r3c2.info("Cannot plot Steps vs Calories (missing columns).")
             
@@ -242,7 +242,7 @@ def render_metric_tab(tab, metric_name, df, config, supabase_client=None):
                     st.session_state[f"{metric_name}_chartBin"] = pd.DataFrame()
 
                 st.session_state[f"{metric_name}_chartBin"] = chartBin
-                st.altair_chart(st.session_state[f"{metric_name}_chartBin"], use_container_width=True)
+                st.altair_chart(st.session_state[f"{metric_name}_chartBin"], width='stretch')
             else:
                 st.info("No binning data available")
 
@@ -307,7 +307,7 @@ def cal_tab(tab, metric_name, df, config, supabase_client=None):
             
             if chart:
                 colchrt,coldf = st.columns([4,2]) 
-                colchrt.altair_chart(chart, use_container_width=True)
+                colchrt.altair_chart(chart, width='stretch')
                 with coldf.expander(f'{summary_label} Summary'):
                     st.dataframe(chrtdf.style.format("{:.2f}"))
         
@@ -407,15 +407,15 @@ def create_weekly_chart(df, config, selected_metrics):
     # --- Month Navigation ---
     col1, col2, col3 = st.columns([1, 2, 1],gap='small')
     with col1:
-        if st.button("⬅️ Prev Month",use_container_width=True) and current_month_idx > 0:
+        if st.button("⬅️ Prev Month",width='stretch') and current_month_idx > 0:
             st.session_state.current_month_idx -= 1
             st.session_state.current_week = None
     with col2:
-        if st.button(f"{current_month.strftime('%B %Y')}",use_container_width=True):
+        if st.button(f"{current_month.strftime('%B %Y')}",width='stretch'):
             st.session_state.current_month_idx = len(unique_months) - 1
             st.session_state.current_week = None
     with col3:
-        if st.button("Next Month ➡️",use_container_width=True) and current_month_idx < len(unique_months) - 1:
+        if st.button("Next Month ➡️",width='stretch') and current_month_idx < len(unique_months) - 1:
             st.session_state.current_month_idx += 1
             st.session_state.current_week = None
 
@@ -429,10 +429,10 @@ def create_weekly_chart(df, config, selected_metrics):
     for i, wk in enumerate(weeks_in_month):
         # Highlight active week
         if wk == st.session_state.current_week:
-            if week_cols[i].button(f"**Week {i+1}** 🔹",use_container_width=True):
+            if week_cols[i].button(f"**Week {i+1}** 🔹",width='stretch'):
                 st.session_state.current_week = wk
         else:
-            if week_cols[i].button(f"Week {i+1}",use_container_width=True):
+            if week_cols[i].button(f"Week {i+1}",width='stretch'):
                 st.session_state.current_week = wk
 
     # Filter data for current week
@@ -528,12 +528,12 @@ def create_monthly_chart(df, config, selected_metrics):
     # --- Month Navigation ---
     col1, col2, col3 = st.columns([1, 2, 1], gap='small')
     with col1:
-        if st.button("⬅️ Prev Month", use_container_width=True) and current_month_idx > 0:
+        if st.button("⬅️ Prev Month", width='stretch') and current_month_idx > 0:
             st.session_state.current_month_idx -= 1
     with col2:
-        st.button(f"{current_month.strftime('%B %Y')}", use_container_width=True)
+        st.button(f"{current_month.strftime('%B %Y')}", width='stretch')
     with col3:
-        if st.button("Next Month ➡️", use_container_width=True) and current_month_idx < len(unique_months) - 1:
+        if st.button("Next Month ➡️", width='stretch') and current_month_idx < len(unique_months) - 1:
             st.session_state.current_month_idx += 1
 
     # Filter data for current month
@@ -653,7 +653,7 @@ def display_daily_charts(daily_data, config, selected_metrics):
             height=300
         )
         
-        st.altair_chart(pie_chart, use_container_width=True)
+        st.altair_chart(pie_chart, width='stretch')
     
     with col2:
         # Bar chart by metric
@@ -667,7 +667,7 @@ def display_daily_charts(daily_data, config, selected_metrics):
             height=300
         )
         
-        st.altair_chart(bar_chart, use_container_width=True)
+        st.altair_chart(bar_chart, width='stretch')
     
     # Time-based chart if we have multiple time points
     if len(daily_data) > 1:
@@ -695,7 +695,7 @@ def display_daily_charts(daily_data, config, selected_metrics):
                 height=300
             ).interactive()
             
-            st.altair_chart(line_chart, use_container_width=True)
+            st.altair_chart(line_chart, width='stretch')
 
        
     

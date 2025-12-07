@@ -214,7 +214,7 @@ def show_activity(df_exercise,df_exercise_routine,df_custom_exercise,df_inbuilt_
             else:
                 st.info('No HR data available')
             st.markdown(f'#### {workout_name} -  {min(df_bin['start_time']).strftime("%I:%M %p").lstrip("0").lower()} to {max(df_bin['start_time']).strftime("%I:%M %p").lstrip("0").lower()}')
-            st.altair_chart(chart_bin,use_container_width=True)
+            st.altair_chart(chart_bin,width='stretch')
 
         # Filter by selected date
         if selected_date:
@@ -699,7 +699,7 @@ def show_activity(df_exercise,df_exercise_routine,df_custom_exercise,df_inbuilt_
                         .encode(x="index", y=alt.Y(vital, title=vital))
                         .properties(width="container", height=200, title=vital)
                     )
-                    st.altair_chart(chart, use_container_width=True)
+                    st.altair_chart(chart, width='stretch')
      
         def loadMapfiles(type, date, file_type, supabase):    
             bucket_name = "healthsync-bucket"

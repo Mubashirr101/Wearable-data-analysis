@@ -77,6 +77,16 @@ def summarize_days(dfs):
     for key, table in dfs.items():
         if key == 'steps':
             continue
+        elif key == 'hr':
+            new_table = table.dropna().groupby('start_time').agg(
+                hr = ('heart_rate_heart_rate','mean'),
+                hr_min = ('heart_rate_min','min'),
+                hr_max = ('heart_rate_max','max'),
+            ).reset_index()
+            dfs[key] = new_table
+        elif key == 'calorie':
+            continue
+    return dfs
 
         
     
@@ -96,20 +106,26 @@ def show_home(df_hr,df_steps_daily,df_calorie,supabase_client):
     cleaned_dfs = clean_raw_df(dfs)
     filtered_dfs = filter_dfs(cleaned_dfs) 
 
-    print(filtered_dfs['hr'])
-    summarize_days(filtered_dfs)
+    # print(filtered_dfs['hr'])
+    summarized_data = summarize_days(filtered_dfs)
 
 
 
 
-    ###########################################333
-    steps_data = filtered_dfs['steps'].copy()
+    ####################################################### STEPS DATA
+    steps_data = summarized_data['steps'].copy()
     if not steps_data.empty and 'day_time' in steps_data.columns:
         steps_data = steps_data.reset_index(drop = True)
         steps_data.loc[:,'weekday'] = steps_data['day_time'].dt.day_name().str[:3]
     else:
         steps_data['weekday'] = []
 
+    # for weekly aggregates
+    agg_steps = steps_data['count'].mean()
+    ########################################################### HR DATA
+    hr_data = summarized_data['hr'].copy()
+    if not hr_data.empty and 'hr' in hr_data.columns:
+        agg_hr = hr_data['hr'].mean()
 
     # Fake placeholder data
     goals = {
@@ -158,7 +174,7 @@ def show_home(df_hr,df_steps_daily,df_calorie,supabase_client):
         )
         goalContainer_1.subheader('⚡Goals Completed')
         c1c1,c1c2 = goalContainer_1.columns([1,2])
-        c1c1.altair_chart(donut_chart,use_container_width=True)
+        c1c1.altair_chart(donut_chart,width='stretch')
         c1c2.metric(label='⚡Goals Completed', value='4/6', delta='+1', label_visibility='collapsed')
 
         ###### goal list         
@@ -167,21 +183,30 @@ def show_home(df_hr,df_steps_daily,df_calorie,supabase_client):
         for k , v in goals.items():
             goalContainer_2.write(f'- {k}: **{v}**')
 
-    with col2:        
-        col2_subcol1, col2_subcol2 ,col2_subcol3,col2_subcol4 = st.columns([2,2,2,2])
+    with col2:
+        agg_container = st.container(border = True,gap=None,vertical_alignment = 'distribute')
+        agg_container.markdown("""
+        <span style="
+            font-weight: 700;
+            font-size: 1.4rem;
+            opacity: 0.8;
+        ">
+            *Weekly Averages*
+        </span>
+        """, unsafe_allow_html=True)
+        col2_subcol1, col2_subcol2 ,col2_subcol3,col2_subcol4 = agg_container.columns([2,2,2,2])
         with col2_subcol1:
             sleepContainer = st.container(border=True)
-            # sleepContainer.markdown("<h3 style = 'text-align:left;'>💤 Sleep</h3>",unsafe_allow_html=True)
-            sleepContainer.metric(label='💤 Sleep',value='7.5 hrs',delta='-0.5h')
+            sleepContainer.metric(label='💤 Sleep',value=f'7.5 hrs',delta=f'-0.5h')
         with col2_subcol2:
             caloriesContainer = st.container(border=True)
-            caloriesContainer.metric(label='🍎 Calories', value='1800 kcal', delta='+300')
+            caloriesContainer.metric(label='🍎 Calories', value='1800 kcal', delta=f'+300')
         with col2_subcol3:
             stepsContainer = st.container(border=True)
-            stepsContainer.metric(label='👟 Steps',value='8200',delta='+500')
+            stepsContainer.metric(label='👟 Steps',value=f'{agg_steps:.0f}',delta=f'+500')
         with col2_subcol4:
             hravgContainer = st.container(border=True)   
-            hravgContainer.metric(label='❤️ HR (avg)',value='72 bpm',delta='+5')
+            hravgContainer.metric(label='❤️ HR (avg)',value=f'{agg_hr:.0f} bpm',delta=f'+5')
         
         
         weekday_order = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
@@ -210,6 +235,6 @@ def show_home(df_hr,df_steps_daily,df_calorie,supabase_client):
                 )
                 .interactive()
         )
-        stepstrendsContainer.altair_chart(steps_chart,use_container_width=True)
+        stepstrendsContainer.altair_chart(steps_chart,width='stretch')
        
 
