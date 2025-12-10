@@ -118,6 +118,11 @@ METRICS_CONFIG = {
         "table": "step_daily_trend",
         "columns": ["create_time","day_time","count","speed","distance","calorie","deviceuuid","binning_data"],
         "jsonPath_template": "com.samsung.shealth.step_daily_trend/{0}/{1}"
+    },
+    "food_intake":{
+        "table":"food_intake",
+        "columns": ["create_time","name","meal_type","calorie","time_offset","food_info_id","datauuid"],
+        "jsonPath_template" : ""
     }
 }
 
@@ -190,7 +195,8 @@ def warmup():
         # Exercise
         elif metric == "exercise" and "exercise_time_offset" in df.columns and "exercise_start_time" in df.columns:
             df["localized_time"] = df.apply(lambda r: apply_offset(r, "exercise_time_offset", "exercise_start_time"), axis=1)
-      
+        elif metric == "food_intake" and "time_offset" in df.columns and "create_time" in df.columns:
+            df["localized_time"] = df.apply(lambda r: apply_offset(r, "time_offset","create_time" ), axis=1)
         # -----------------------------------------------------
 
         dataframes[metric] = df
@@ -240,6 +246,7 @@ class App:
                 self.dataframes.get("hr"),
                 self.dataframes.get("step_daily_trend"),
                 self.dataframes.get("calorie"),
+                self.dataframes.get("food_intake"),
                 self.supabase_client
 
             ),

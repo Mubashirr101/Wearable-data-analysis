@@ -11,40 +11,46 @@ def clean_raw_df(raw_dataframes):
         if key == 'steps':
             continue
         value = value.loc[:,~value.columns.str.contains("start_time")]
+        value = value.loc[:,~value.columns.str.contains("create_time")]        
         value = value.loc[:,~value.columns.str.contains("time_offset")]
         value = value.loc[:,~value.columns.str.contains("jsonPath")]
         value = value.loc[:,~value.columns.str.contains("binning")]
         value = value.loc[:,~value.columns.str.contains("uuid")]
         value = value.loc[:,~value.columns.str.contains("live_data")]
-        
 
+               
         value = value.rename(columns= lambda c: "start_time" if "localized_time" in c else c)
         cols = value.columns.tolist()
+            
         if "start_time" in cols:
             cols.insert(0, cols.pop(cols.index("start_time")))
             value = value[cols]
         df[key] = value
     return df
+
 def filter_dfs(dfs):
     filtered_dfs = {}
     latest_dates = []
     for table_name, table in dfs.items():
         tbl = table.copy()
+        datetime_col = None
         # normlizing day_time/start_time safely only if not already datetime
         if 'day_time' in tbl.columns:
-            tbl['day_time'] = pd.to_datetime(tbl['day_time'], unit='ms',errors='coerce')            
-            tbl['day_time'] = tbl['day_time'].dt.normalize()
-            latest_dates.append(tbl['day_time'].max())            
+            datetime_col = 'day_time'
+        elif 'start_time' in tbl.columns:
+            datetime_col = 'start_time'
         else:
-            # ensureing start time exists and it datetime
-            if not pd.api.types.is_datetime64_any_dtype(tbl['start_time']):
-                tbl['start_time']  = pd.to_datetime(tbl['start_time'],errors = 'coerce')
-                tbl['start_time'] = tbl['start_time'].dt.normalize()
-            else:
-                tbl['start_time']  = pd.to_datetime(tbl['start_time'],errors = 'coerce')
-                tbl['start_time'] = tbl['start_time'].dt.normalize()
-            latest_dates.append(tbl['start_time'].max())
+            latest_dates.append(pd.NaT)
+            continue
 
+        if datetime_col == 'day_time':
+            tbl['day_time'] = pd.to_datetime(tbl[datetime_col], unit='ms',errors='coerce')            
+        else:
+            tbl[datetime_col] = pd.to_datetime(tbl[datetime_col],errors='coerce')
+
+        # nomalize and find the most latest date
+        tbl[datetime_col] = tbl[datetime_col].dt.normalize()
+        latest_dates.append(tbl[datetime_col].max())
         dfs[table_name] = tbl
 
 
@@ -58,18 +64,25 @@ def filter_dfs(dfs):
         return {k:v.iloc[0:0].copy() for k,v in dfs.items()}
 
     # which latest date is the majority in the tables, that dates week will be shown
-    majority_date = Counter(latest_dates).most_common(1)[0]
+    majority_date = Counter(valid_dates).most_common(1)[0]
     target_date = majority_date[0]
-    target_iso_year, target_iso_week, _ = target_date.isocalendar()   
+    target_iso_year, target_iso_week, _ = target_date.isocalendar()     
+
     for table_name, table in dfs.items() :
         tbl = table.copy()
+        datetime_col = None        
         if 'day_time' in tbl.columns:
-            mask = (tbl["day_time"].dt.isocalendar().year == target_iso_year) & (tbl["day_time"].dt.isocalendar().week == target_iso_week)
-            df_filtered = tbl.loc[mask].sort_values(by='day_time',ascending = True).copy()
+            datetime_col = 'day_time'
+        elif 'start_time' in tbl.columns:
+            datetime_col = 'start_time'
+
         else:
-            mask = (tbl["start_time"].dt.isocalendar().year == target_iso_year) & (tbl["start_time"].dt.isocalendar().week == target_iso_week)
-            df_filtered = tbl.loc[mask].sort_values(by='start_time',ascending = True).copy()
-        
+            continue
+
+        df_filtered =  None
+        iso = tbl[datetime_col].dt.isocalendar()        
+        mask = (iso.year == target_iso_year) & (iso.week == target_iso_week)        
+        df_filtered = tbl.loc[mask].sort_values(by=datetime_col,ascending = True).copy()        
         filtered_dfs[table_name] = df_filtered
     return filtered_dfs
 
@@ -86,12 +99,17 @@ def summarize_days(dfs):
             dfs[key] = new_table
         elif key == 'calorie':
             continue
+        elif key == 'food':
+            new_table = table.dropna().groupby('start_time').agg(
+                intake_cals = ('calorie','sum'),
+            ).reset_index()
+            dfs[key] = new_table
     return dfs
 
         
     
 
-def show_home(df_hr,df_steps_daily,df_calorie,supabase_client):        
+def show_home(df_hr,df_steps_daily,df_calorie,df_food_intake,supabase_client):        
     
     ####################################################3
     ## data fetching
@@ -100,9 +118,9 @@ def show_home(df_hr,df_steps_daily,df_calorie,supabase_client):
     dfs ={
         'hr':df_hr[['heart_rate_start_time','heart_rate_heart_rate','heart_rate_min','heart_rate_max','localized_time']],
         'steps':df_steps_daily[['day_time','count']],
-        'calorie':df_calorie
+        'calorie':df_calorie,
+        'food': df_food_intake[['create_time','calorie','localized_time']],
     }
-    
     cleaned_dfs = clean_raw_df(dfs)
     filtered_dfs = filter_dfs(cleaned_dfs) 
 
@@ -126,6 +144,13 @@ def show_home(df_hr,df_steps_daily,df_calorie,supabase_client):
     hr_data = summarized_data['hr'].copy()
     if not hr_data.empty and 'hr' in hr_data.columns:
         agg_hr = hr_data['hr'].mean()
+    ############################################################ Cal data
+    cal_data = summarized_data['food'].copy()
+    agg_cal = None
+    if not cal_data.empty and 'intake_cals' in cal_data.columns:
+        agg_cal = cal_data['intake_cals'].mean()
+    if not agg_cal:
+        agg_cal = 2000 # placeholder
 
     # Fake placeholder data
     goals = {
@@ -200,7 +225,7 @@ def show_home(df_hr,df_steps_daily,df_calorie,supabase_client):
             sleepContainer.metric(label='💤 Sleep',value=f'7.5 hrs',delta=f'-0.5h')
         with col2_subcol2:
             caloriesContainer = st.container(border=True)
-            caloriesContainer.metric(label='🍎 Calories', value='1800 kcal', delta=f'+300')
+            caloriesContainer.metric(label='🍎 Calories', value=f'{agg_cal:.0f} kcal', delta=f'+300')
         with col2_subcol3:
             stepsContainer = st.container(border=True)
             stepsContainer.metric(label='👟 Steps',value=f'{agg_steps:.0f}',delta=f'+500')
