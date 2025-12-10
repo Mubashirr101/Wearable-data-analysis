@@ -103,14 +103,16 @@ def insert_data(cursor,table_name,df,uniquekey):
     for col in df.columns:
         col_safe = col.strip().lower().replace(" ", "_")
         # Remove leading com.samsung.health.* (any depth)
-        col_safe = re.sub(r'^com\.samsung\.health\.[a-z0-9_\.]*\.', '', col_safe)
+        col_safe = re.sub(r'^com\.samsung\.s?health\.', '', col_safe)
 
         # Remove leading com.samsung.shealth.* (any depth)
-        col_safe = re.sub(r'^com\.samsung\.shealth\.[a-z0-9_\.]*\.', '', col_safe)
+        # col_safe = re.sub(r'^com\.samsung\.shealth\.', '', col_safe)
 
         # Replace any leftover dots
         col_safe = col_safe.replace(".", "_")
-        
+        cols.append(col_safe)        
+        print(table_name,':',col_safe)    
+
     df = df.where(pd.notnull(df), None)
     placeholders = ", ".join(["%s"] * len(cols))
     col_list = ", ".join(cols)

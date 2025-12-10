@@ -139,8 +139,8 @@ def run_flow():
         findnewfiles(FILENAMES_JSON)
         save_feat(data_path)
         run_etl(data_path,conn)
-        run_json_sync(json_path)
-        run_healthsync_sync(healthsync_path)
+        # run_json_sync(json_path)
+        # run_healthsync_sync(healthsync_path)
         # closing the connection of DB
         conn.close()
         connection = get_connection("supabase")
