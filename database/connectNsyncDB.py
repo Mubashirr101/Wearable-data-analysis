@@ -208,28 +208,47 @@ def run_etl(data_folder,conn):
                 print(f"[ERROR] Bulk insert failed for {cleaned_tbl_name}: {insert_err}")
                 print("[INFO] Attempting row-by-row insert to find problem row...")
 
-                # row-by-row insert with commit in chunks
+                # ----- FIX START -----
+                # Rebuild safe cleaned column names (same logic as bulk insert)
+                safe_cols = []
+                for col in df.columns:
+                    col_safe = col.strip().lower().replace(" ", "_")
+                    col_safe = re.sub(r"^com\.samsung\.s?health\.", "", col_safe)
+                    col_safe = col_safe.replace(".", "_")
+                    safe_cols.append(col_safe)
+
+                col_list = ", ".join(safe_cols)
+                placeholders = ", ".join(["%s"] * len(safe_cols))
+
+                if uniqueKey:
+                    fallback_insert_query = sql.SQL(
+                        f"INSERT INTO {sql.Identifier(cleaned_tbl_name).as_string(cursor)} "
+                        f"({col_list}) VALUES ({placeholders}) "
+                        f"ON CONFLICT ({sql.Identifier(uniqueKey).as_string(cursor)}) DO NOTHING;"
+                    )
+                else:
+                    fallback_insert_query = sql.SQL(
+                        f"INSERT INTO {sql.Identifier(cleaned_tbl_name).as_string(cursor)} "
+                        f"({col_list}) VALUES ({placeholders});"
+                    )
+                # ----- FIX END -----
+
                 rows = list(df.itertuples(index=False, name=None))
                 batch_size = 500
+
                 for i in range(0, len(rows), batch_size):
-                    batch = rows[i:i+batch_size]
+                    batch = rows[i:i + batch_size]
+
                     try:
-                        # prepare a small df for batch insertion
-                        cols_df = df.iloc[:len(batch)].copy()
-                        # execute row inserts for the batch
                         for row in batch:
-                            cursor.execute(
-                                sql.SQL(f"INSERT INTO {sql.Identifier(cleaned_tbl_name).as_string(cursor)} ({', '.join([c.strip().lower().replace(' ','_') for c in df.columns])}) VALUES ({', '.join(['%s']*len(df.columns))}) ON CONFLICT ({sql.Identifier(uniqueKey).as_string(cursor)}) DO NOTHING;") if uniqueKey else
-                                sql.SQL(f"INSERT INTO {sql.Identifier(cleaned_tbl_name).as_string(cursor)} ({', '.join([c.strip().lower().replace(' ','_') for c in df.columns])}) VALUES ({', '.join(['%s']*len(df.columns))});"),
-                                row
-                            )
+                            cursor.execute(fallback_insert_query, row)
+
                         conn.commit()
+
                     except Exception as row_err:
                         conn.rollback()
                         print(f"[ ERROR] Failed in batch starting row {i+1}: {row_err}")
-                        # optionally continue next batch or raise
                         raise row_err
-
         except Exception as e:
             print(f"Error processing {file_path}: {e}")
             conn.rollback()
