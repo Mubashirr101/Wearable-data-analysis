@@ -240,18 +240,20 @@ def show_home(df_hr,df_steps_daily,df_calorie,df_food_intake,df_sleep,supabase_c
 
 
     # Use HTML instead of st.title
-    st.markdown("""
-                <h1 style ="  
-                font-size: 2.3em; 
-                white-space: nowrap; 
-                overflow: hidden; 
-                text-overflow: ellipsis; 
-                width: 100%;
-            ">
-                🏃🏻‍♂️ Athlete Tracker
-            </h1>
-            """,
-          unsafe_allow_html=True)
+    with st.container():
+        st.markdown("""
+                    <h1 style ="  
+                    font-size: 2.3em; 
+                    white-space: nowrap; 
+                    overflow: hidden; 
+                    text-overflow: ellipsis; 
+                    width: 100%;
+                    margin: 0px !important;    
+                ">
+                    🏃🏻‍♂️ Athlete Tracker
+                </h1>
+                """,
+            unsafe_allow_html=True)
     
         
     col1,col2 = st.columns([4,8])        

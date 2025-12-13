@@ -224,12 +224,34 @@ class App:
         st.set_page_config(layout='wide', page_title='Athlete Tracker', initial_sidebar_state='collapsed')
         # Inject CSS
         st.markdown(
-            """<style>
-            .block-container {padding-top: 0rem !important; margin-top: 0rem !important;}
-            .st-emotion-cache-p6n0jw {gap: 0rem !important;}
-            </style>""",
+            """
+            <style>
+            /* Remove Streamlit top header space */
+            header { 
+                visibility: hidden; 
+                height: 0px;
+            }
+
+            /* Remove top padding of main content */
+            .block-container {
+                padding-top: 0rem !important;
+                margin-top: 0rem !important;
+            }
+
+            /* Remove extra spacing between elements */
+            .st-emotion-cache-p6n0jw {
+                gap: 0rem !important;
+            }
+
+            /* Remove navbar bottom margin if any */
+            nav {
+                margin-bottom: 0px !important;
+            }
+            </style>
+            """,
             unsafe_allow_html=True
         )
+
 
         # Init session state
         if 'initialized' not in st.session_state:
@@ -245,8 +267,28 @@ class App:
         parent_dir = os.path.dirname(os.path.abspath(__file__))
         logo_path = os.path.join(parent_dir, "home_dark.svg")
         urls = {"Github": "https://github.com/Mubashirr101/Wearable-data-analysis"}
-        styles = {'nav': {'background-color':'#2E3847','justify-content':'left','margin-bottom':'1px'}}
-        options = {'show_menu': False, 'show_sidebar': False}
+        styles = {
+            "nav": {
+                "background-color": "rgba(46, 56, 71, 1)"
+,
+            },
+            "div": {
+                "max-width": "32rem",
+            },
+            "span": {
+                "border-radius": "0.5rem",
+                "color": "rgb(255, 255, 255)",
+                "margin": "0 0.125rem",
+                "padding": "0.4375rem 0.625rem",
+            },
+            "active": {
+                "background-color": "rgba(255, 255, 255, 0.25)",
+            },
+            "hover": {
+                "background-color": "rgba(255, 255, 255, 0.35)",
+            },
+        }
+        options = {'show_menu': False, 'show_sidebar': False, 'use_padding': False}
         
         page = st_navbar(pages, logo_path=logo_path, styles=styles, urls=urls, options=options)
 
