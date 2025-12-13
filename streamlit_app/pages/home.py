@@ -122,8 +122,101 @@ def summarize_days(dfs):
 
     return dfs
 
-        
+def datafect(data,stat_col,placehlder_val):
+    agg = placehlder_val
+    if not data.empty and stat_col in data.columns:
+        agg = data[stat_col].mean() 
+    return agg
+
+def fetch_stats(dfs):
+    summarized_data = dfs
+
+
+    ## STEPS DATA week chart
+    steps_data = summarized_data['steps'].copy()
+    if not steps_data.empty and 'day_time' in steps_data.columns:
+        steps_data = steps_data.reset_index(drop = True)
+        steps_data.loc[:,'weekday'] = steps_data['day_time'].dt.day_name().str[:3]
+    else:
+        steps_data['weekday'] = []
+    weekday_order = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    full_week = pd.DataFrame({'weekday': weekday_order})
+    weekly_steps = full_week.merge(
+        steps_data[['weekday','day_time','count']], 
+        on = 'weekday',
+        how='left'
+        )
+    weekly_steps['count'] = weekly_steps['count'].fillna(0)
+    # filling dates if na
+    week_start = steps_data['day_time'].min().normalize()
+    weekly_steps['day_time'] = pd.date_range(start=week_start,periods=7,freq='D')
+
+    # for weekly aggregates
+   
+    agg_steps = datafect(steps_data,'count',6000)
+    ## HR DATA
+    hr_data = summarized_data['hr'].copy()
+    agg_hr = datafect(hr_data,'hr',80)
+
+    ## Cal data
+    cal_data = summarized_data['food'].copy()
+    agg_cal = datafect(cal_data,'food',2000) 
+
+    ## Sleep Data
+    sleep_data = summarized_data['sleep'].copy()
+    agg_sleep = datafect(sleep_data,'sleep_duration',7.5)
+    # Round to 1 decimal place only if needed
+    if agg_sleep != round(agg_sleep,1):
+        agg_sleep = round(agg_sleep,1)
+
+    ##########################   GOALS  ####################################### 
+    ## daily stats and targets
+
+    daily_steps_target = 10000 # aka 10k steps for each day
+    daily_cal_target = 1700 # 1700 cal per day
+    daily_sleep_target = 8 # 8hrs a day
+    daily_active_mins_target = 60 # an hour of activity
+
     
+    if not steps_data.empty:
+        daily_steps = steps_data.loc[steps_data['day_time'].idxmax(),'count']
+    else:
+        daily_steps = 2000
+    if not cal_data.empty:
+        daily_cal = cal_data.loc[cal_data['start_time'].idxmax(),'intake_cals']
+    else:
+        daily_cal = 1600
+    if not sleep_data.empty:
+        daily_sleep = sleep_data.loc[sleep_data['start_time'].idxmax(),'sleep_duration']
+    else:
+        daily_sleep = 7
+    
+    daily_active_mins = 60 # placeholder    
+
+
+    goals = {
+    "Steps": f"{daily_steps} / {daily_steps_target}",
+    "Sleep": f"{daily_sleep} / {daily_sleep_target} hrs",
+    "Calories": f"{daily_cal} / {daily_cal_target} kcal",
+    "Active Minutes": f"{daily_active_mins} / {daily_active_mins_target} min"
+    }   
+    
+    ########## goals donut chart ############################
+
+    goals_dict = {
+            daily_steps_target : daily_steps,
+            daily_sleep_target : daily_sleep,
+            daily_cal_target : daily_cal,
+            daily_active_mins_target : daily_active_mins,
+        }     
+    completed_goals = 0
+    remaining_goals = 4  
+    for target,value in goals_dict.items():
+        if value >= target:
+            completed_goals += 1
+            remaining_goals -= 1  
+    
+    return agg_sleep,agg_steps,agg_cal,agg_sleep,agg_hr,weekly_steps,weekday_order,goals,completed_goals,remaining_goals
 
 def show_home(df_hr,df_steps_daily,df_calorie,df_food_intake,df_sleep,supabase_client):        
     
@@ -140,57 +233,11 @@ def show_home(df_hr,df_steps_daily,df_calorie,df_food_intake,df_sleep,supabase_c
     }
     cleaned_dfs = clean_raw_df(dfs)
     filtered_dfs = filter_dfs(cleaned_dfs) 
-    print(filtered_dfs['sleep'])
-    # print(filtered_dfs['hr'])
     summarized_data = summarize_days(filtered_dfs)
-    print(summarized_data['sleep'])
 
 
+    agg_sleep,agg_steps,agg_cal,agg_sleep,agg_hr,weekly_steps,weekday_order,goals,completed_goals,remaining_goals = fetch_stats(summarized_data)
 
-
-    ####################################################### STEPS DATA
-    steps_data = summarized_data['steps'].copy()
-    if not steps_data.empty and 'day_time' in steps_data.columns:
-        steps_data = steps_data.reset_index(drop = True)
-        steps_data.loc[:,'weekday'] = steps_data['day_time'].dt.day_name().str[:3]
-    else:
-        steps_data['weekday'] = []
-
-    # for weekly aggregates
-    agg_steps = steps_data['count'].mean()
-    ########################################################### HR DATA
-    hr_data = summarized_data['hr'].copy()
-    agg_hr = None
-    if not hr_data.empty and 'hr' in hr_data.columns:
-        agg_hr = hr_data['hr'].mean()
-    else:
-        agg_hr = 80 # placeholder
-    ############################################################ Cal data
-    cal_data = summarized_data['food'].copy()
-    agg_cal = None
-    if not cal_data.empty and 'intake_cals' in cal_data.columns:
-        agg_cal = cal_data['intake_cals'].mean()
-    else:
-        agg_cal = 2000 # placeholder
-
-    ################################################ Sleep Data
-    sleep_data = summarized_data['sleep'].copy()
-    agg_sleep = None
-    if not sleep_data.empty and 'sleep_duration' in sleep_data.columns:
-        agg_sleep = sleep_data['sleep_duration'].mean().round(1) 
-    else:
-        agg_sleep = 7.5 # placeholder
-
-    #################################### GOALS
-    # Fake placeholder data
-    goals = {
-    "Steps": "10,000 / 12,000",
-    "Sleep": "7.5 / 8 hrs",
-    "Calories": "1800 / 2000 kcal",
-    "Active Minutes": "45 / 60 min"
-    }                            
-    # st.title('🏃🏻‍♂️ Athlete Tracker')
-   
 
     # Use HTML instead of st.title
     st.markdown("""
@@ -214,8 +261,9 @@ def show_home(df_hr,df_steps_daily,df_calorie,df_food_intake,df_sleep,supabase_c
         goalContainer_1 = st.container(border=True)
         progress_data = pd.DataFrame({
         "Category": ["Completed", "Remaining"],
-        "Value": [4, 2]
+        "Value": [1, 3]
         })
+        total_goals = completed_goals + remaining_goals
         # goalContainer_1.subheader("🔥Goal Completion")        
         donut_chart = (
         alt.Chart(progress_data,height=100,width=100)
@@ -230,7 +278,7 @@ def show_home(df_hr,df_steps_daily,df_calorie,df_food_intake,df_sleep,supabase_c
         goalContainer_1.subheader('⚡Goals Completed')
         c1c1,c1c2 = goalContainer_1.columns([1,2])
         c1c1.altair_chart(donut_chart,width='stretch')
-        c1c2.metric(label='⚡Goals Completed', value='4/6', delta='+1', label_visibility='collapsed')
+        c1c2.metric(label='⚡Goals Completed', value=f'{completed_goals}/{total_goals}', delta='+1', label_visibility='collapsed')
 
         ###### goal list         
         goalContainer_2 = st.container(border=True)
@@ -264,17 +312,7 @@ def show_home(df_hr,df_steps_daily,df_calorie,df_food_intake,df_sleep,supabase_c
             hravgContainer.metric(label='❤️ HR (avg)',value=f'{agg_hr:.0f} bpm',delta=f'+5')
         
         
-        weekday_order = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-        full_week = pd.DataFrame({'weekday': weekday_order})
-        weekly_steps = full_week.merge(
-            steps_data[['weekday','day_time','count']], 
-            on = 'weekday',
-            how='left'
-        )
-        weekly_steps['count'] = weekly_steps['count'].fillna(0)
-        # filling dates if na
-        week_start = steps_data['day_time'].min().normalize()
-        weekly_steps['day_time'] = pd.date_range(start=week_start,periods=7,freq='D')
+       
         stepstrendsContainer = st.container(border=True)
         stepstrendsContainer.subheader('📊Steps Trend (Weekly)')
         steps_chart = (
