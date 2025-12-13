@@ -4,22 +4,20 @@ import numpy as np
 import altair as alt
 import time
 from collections import Counter
+from datetime import datetime, date
 
 def clean_raw_df(raw_dataframes):
     df = raw_dataframes
     for key, value in df.items():
         if key == 'steps':
-            continue
-        value = value.loc[:,~value.columns.str.contains("start_time")]
-        value = value.loc[:,~value.columns.str.contains("create_time")]        
-        value = value.loc[:,~value.columns.str.contains("time_offset")]
-        value = value.loc[:,~value.columns.str.contains("jsonPath")]
-        value = value.loc[:,~value.columns.str.contains("binning")]
-        value = value.loc[:,~value.columns.str.contains("uuid")]
-        value = value.loc[:,~value.columns.str.contains("live_data")]
+            continue       
 
-               
-        value = value.rename(columns= lambda c: "start_time" if "localized_time" in c else c)
+        if "localized_time" in value.columns:
+            value = value.rename(columns= lambda c: "start_time" if "localized_time" in c else c)
+        elif "localized_start_time" in value.columns and "localized_end_time" in value.columns:
+            value = value.rename(columns= lambda c: "start_time" if "localized_start_time" in c else c)
+            value = value.rename(columns= lambda c: "end_time" if "localized_end_time" in c else c)
+        
         cols = value.columns.tolist()
             
         if "start_time" in cols:
@@ -49,8 +47,16 @@ def filter_dfs(dfs):
             tbl[datetime_col] = pd.to_datetime(tbl[datetime_col],errors='coerce')
 
         # nomalize and find the most latest date
-        tbl[datetime_col] = tbl[datetime_col].dt.normalize()
-        latest_dates.append(tbl[datetime_col].max())
+        sleep_temp_tbl = pd.DataFrame() # temp table for storing latest date of sleep data
+        if table_name == 'sleep':
+            sleep_temp_tbl[datetime_col] = tbl[datetime_col].dt.normalize()
+            latest_dates.append(sleep_temp_tbl[datetime_col].max())                      
+        else:
+            
+            tbl[datetime_col] = tbl[datetime_col].dt.normalize()
+            latest_dates.append(tbl[datetime_col].max())  
+            
+
         dfs[table_name] = tbl
 
 
@@ -68,6 +74,7 @@ def filter_dfs(dfs):
     target_date = majority_date[0]
     target_iso_year, target_iso_week, _ = target_date.isocalendar()     
 
+
     for table_name, table in dfs.items() :
         tbl = table.copy()
         datetime_col = None        
@@ -80,7 +87,7 @@ def filter_dfs(dfs):
             continue
 
         df_filtered =  None
-        iso = tbl[datetime_col].dt.isocalendar()        
+        iso = tbl[datetime_col].dt.isocalendar()
         mask = (iso.year == target_iso_year) & (iso.week == target_iso_week)        
         df_filtered = tbl.loc[mask].sort_values(by=datetime_col,ascending = True).copy()        
         filtered_dfs[table_name] = df_filtered
@@ -104,12 +111,21 @@ def summarize_days(dfs):
                 intake_cals = ('calorie','sum'),
             ).reset_index()
             dfs[key] = new_table
+        elif key == 'sleep':
+            # calculating the sleep duration from sleep start to end
+            table['sleep_duration'] = table['end_time'] - table['start_time']
+            new_table = table.drop(columns=['end_time'],errors = 'ignore')
+            new_table['start_time'] = new_table['start_time'].dt.normalize()
+            new_table['sleep_duration'] = new_table['sleep_duration'].dt.total_seconds() / 3600 # turning timedelta into hrs            
+            dfs[key] = new_table
+            
+
     return dfs
 
         
     
 
-def show_home(df_hr,df_steps_daily,df_calorie,df_food_intake,supabase_client):        
+def show_home(df_hr,df_steps_daily,df_calorie,df_food_intake,df_sleep,supabase_client):        
     
     ####################################################3
     ## data fetching
@@ -120,12 +136,14 @@ def show_home(df_hr,df_steps_daily,df_calorie,df_food_intake,supabase_client):
         'steps':df_steps_daily[['day_time','count']],
         'calorie':df_calorie,
         'food': df_food_intake[['create_time','calorie','localized_time']],
+        'sleep': df_sleep[['localized_start_time','localized_end_time']]
     }
     cleaned_dfs = clean_raw_df(dfs)
     filtered_dfs = filter_dfs(cleaned_dfs) 
-
+    print(filtered_dfs['sleep'])
     # print(filtered_dfs['hr'])
     summarized_data = summarize_days(filtered_dfs)
+    print(summarized_data['sleep'])
 
 
 
@@ -142,16 +160,28 @@ def show_home(df_hr,df_steps_daily,df_calorie,df_food_intake,supabase_client):
     agg_steps = steps_data['count'].mean()
     ########################################################### HR DATA
     hr_data = summarized_data['hr'].copy()
+    agg_hr = None
     if not hr_data.empty and 'hr' in hr_data.columns:
         agg_hr = hr_data['hr'].mean()
+    else:
+        agg_hr = 80 # placeholder
     ############################################################ Cal data
     cal_data = summarized_data['food'].copy()
     agg_cal = None
     if not cal_data.empty and 'intake_cals' in cal_data.columns:
         agg_cal = cal_data['intake_cals'].mean()
-    if not agg_cal:
+    else:
         agg_cal = 2000 # placeholder
 
+    ################################################ Sleep Data
+    sleep_data = summarized_data['sleep'].copy()
+    agg_sleep = None
+    if not sleep_data.empty and 'sleep_duration' in sleep_data.columns:
+        agg_sleep = sleep_data['sleep_duration'].mean().round(1) 
+    else:
+        agg_sleep = 7.5 # placeholder
+
+    #################################### GOALS
     # Fake placeholder data
     goals = {
     "Steps": "10,000 / 12,000",
@@ -222,7 +252,7 @@ def show_home(df_hr,df_steps_daily,df_calorie,df_food_intake,supabase_client):
         col2_subcol1, col2_subcol2 ,col2_subcol3,col2_subcol4 = agg_container.columns([2,2,2,2])
         with col2_subcol1:
             sleepContainer = st.container(border=True)
-            sleepContainer.metric(label='💤 Sleep',value=f'7.5 hrs',delta=f'-0.5h')
+            sleepContainer.metric(label='💤 Sleep',value=f'{agg_sleep} hrs',delta=f'-0.5h')
         with col2_subcol2:
             caloriesContainer = st.container(border=True)
             caloriesContainer.metric(label='🍎 Calories', value=f'{agg_cal:.0f} kcal', delta=f'+300')

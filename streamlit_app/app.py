@@ -123,6 +123,11 @@ METRICS_CONFIG = {
         "table":"food_intake",
         "columns": ["create_time","name","meal_type","calorie","time_offset","food_info_id","datauuid"],
         "jsonPath_template" : ""
+    },
+    "sleep":{
+        "table":"sleep",
+        "columns":["sleep_start_time","sleep_end_time","sleep_time_offset"],
+        "jsonPath_template" : ""
     }
 }
 
@@ -197,6 +202,10 @@ def warmup():
             df["localized_time"] = df.apply(lambda r: apply_offset(r, "exercise_time_offset", "exercise_start_time"), axis=1)
         elif metric == "food_intake" and "time_offset" in df.columns and "create_time" in df.columns:
             df["localized_time"] = df.apply(lambda r: apply_offset(r, "time_offset","create_time" ), axis=1)
+        elif metric == "sleep" and "sleep_time_offset" in df.columns and "sleep_start_time" in df.columns and "sleep_end_time" in df.columns:
+            df["localized_start_time"] = df.apply(lambda r: apply_offset(r, "sleep_time_offset","sleep_start_time" ), axis=1)
+            df["localized_end_time"] = df.apply(lambda r: apply_offset(r, "sleep_time_offset","sleep_end_time" ), axis=1)
+
         # -----------------------------------------------------
 
         dataframes[metric] = df
@@ -247,6 +256,7 @@ class App:
                 self.dataframes.get("step_daily_trend"),
                 self.dataframes.get("calorie"),
                 self.dataframes.get("food_intake"),
+                self.dataframes.get("sleep"),
                 self.supabase_client
 
             ),
