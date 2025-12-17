@@ -290,21 +290,6 @@
             "double_value",
             "datauuid"
         ],
-        "com.samsung.health.water_intake": [
-            "start_time",
-            "amount",
-            "custom",
-            "update_time",
-            "create_time",
-            "client_data_id",
-            "client_data_ver",
-            "time_offset",
-            "deviceuuid",
-            "unit_amount",
-            "comment",
-            "pkg_name",
-            "datauuid"
-        ],
         "com.samsung.health.weight": [
             "body_fat_mass",
             "create_sh_ver",
