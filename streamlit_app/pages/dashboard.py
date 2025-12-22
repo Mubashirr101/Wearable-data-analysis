@@ -10,6 +10,27 @@ import altair as alt
 #     session[k] = session[k]
 
 
+
+def apply_offset(row, offset_col, time_col):
+    offset_val = row[offset_col]
+    if pd.isnull(offset_val):
+        return row[time_col]
+    offset_str = str(offset_val)
+    match = None
+    # Accept both "UTC+0530" and "+05:30" formats
+    if offset_str.startswith("UTC"):
+        match = re.match(r"UTC([+-])(\d{2})(\d{2})", offset_str)
+    else:
+        match = re.match(r"([+-])(\d{2}):?(\d{2})", offset_str)
+    if match:
+        sign, hh, mm = match.groups()
+        hours, minutes = int(hh), int(mm)
+        delta = timedelta(hours=hours, minutes=minutes)
+        if sign == "-":
+            delta = -delta
+        return row[time_col] + delta
+    return row[time_col]
+
 def render_metric_tab(tab, metric_name, df, config, supabase_client=None):
     with tab:
         col1, col2 = st.columns([4, 2])
@@ -143,47 +164,25 @@ def render_metric_tab(tab, metric_name, df, config, supabase_client=None):
                     else:
                         r1c2.info("Not enough time series data for rolling chart.")
 
-                    # Row 2: scatter speed vs distance and histogram of steps
-                    r2c1, r2c2 = st.columns(2)
-                    if {"step_count_speed","step_count_distance"}.issubset(df_steps.columns):
-                        scatter = alt.Chart(df_steps.dropna(subset=["step_count_speed","step_count_distance"])).mark_circle(size=60).encode(
-                            x=alt.X("step_count_speed:Q", title="Speed"),
-                            y=alt.Y("step_count_distance:Q", title="Distance"),
-                            color=alt.Color("run_step:N", title="Run vs Walk") if "run_step" in df_steps.columns else alt.value("steelblue"),
-                            tooltip=[config["localized_time"], "step_count_speed", "step_count_distance", config["value"]]
-                        ).interactive().properties(title="Speed vs Distance (points colored by run_step if available)")
-                        r2c1.altair_chart(scatter, width='stretch')
-                    else:
-                        r2c1.info("Speed/distance data not available.")
-
+                    r2c1, r2c2 = st.columns(2)                   
                     # histogram of step counts
                     hist = alt.Chart(df_steps.dropna(subset=[config["value"]])).mark_bar().encode(
                         x=alt.X(f"{config['value']}:Q", bin=alt.Bin(maxbins=40), title="Step count"),
                         y=alt.Y("count()", title="Frequency"),
                         tooltip=[alt.Tooltip(f"{config['value']}:Q")]
                     ).properties(title="Distribution of Step Counts")
-                    r2c2.altair_chart(hist, width='stretch')
-
-                    # Row 3: boxplot calories and scatter steps vs calories
-                    r3c1, r3c2 = st.columns(2)
-                    if "step_count_calorie" in df_steps.columns:
-                        box = alt.Chart(df_steps.dropna(subset=["step_count_calorie"])).mark_boxplot().encode(
-                            x=alt.X("step_count_calorie:Q", title="Calories"),
-                            tooltip=["step_count_calorie"]
-                        ).properties(title="Calories distribution")
-                        r3c1.altair_chart(box, width='stretch')
-                    else:
-                        r3c1.info("Calories not available.")
-
+                    r2c1.altair_chart(hist, width='stretch')
+                    
+                    # steps vs calories
                     if config["value"] in df_steps.columns and "step_count_calorie" in df_steps.columns:
                         scatter2 = alt.Chart(df_steps.dropna(subset=[config["value"], "step_count_calorie"])).mark_circle().encode(
                             x=alt.X(config["value"], title="Steps"),
                             y=alt.Y("step_count_calorie", title="Calories"),
                             tooltip=[config["localized_time"], config["value"], "step_count_calorie"]
                         ).properties(title="Steps vs Calories")
-                        r3c2.altair_chart(scatter2, width='stretch')
+                        r2c2.altair_chart(scatter2, width='stretch')
                     else:
-                        r3c2.info("Cannot plot Steps vs Calories (missing columns).")
+                        r2c2.info("Cannot plot Steps vs Calories (missing columns).")
             
 
         # ---------- Hourly / binning chart ----------
@@ -1047,22 +1046,3 @@ def chartBinningjsons(dfJson,xval,xtitle,yval,ytitle,yminval,ymaxval):
     ).interactive()  # enable pan/zoom
 
     return chartBin
-def apply_offset(row, offset_col, time_col):
-    offset_val = row[offset_col]
-    if pd.isnull(offset_val):
-        return row[time_col]
-    offset_str = str(offset_val)
-    match = None
-    # Accept both "UTC+0530" and "+05:30" formats
-    if offset_str.startswith("UTC"):
-        match = re.match(r"UTC([+-])(\d{2})(\d{2})", offset_str)
-    else:
-        match = re.match(r"([+-])(\d{2}):?(\d{2})", offset_str)
-    if match:
-        sign, hh, mm = match.groups()
-        hours, minutes = int(hh), int(mm)
-        delta = timedelta(hours=hours, minutes=minutes)
-        if sign == "-":
-            delta = -delta
-        return row[time_col] + delta
-    return row[time_col]

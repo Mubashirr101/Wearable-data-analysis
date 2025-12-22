@@ -122,7 +122,7 @@ def summarize_days(dfs):
 
     return dfs
 
-def datafect(data,stat_col,placehlder_val):
+def aggregate_data(data,stat_col,placehlder_val):
     agg = placehlder_val
     if not data.empty and stat_col in data.columns:
         agg = data[stat_col].mean() 
@@ -153,18 +153,18 @@ def fetch_stats(dfs):
 
     # for weekly aggregates
    
-    agg_steps = datafect(steps_data,'count',6000)
+    agg_steps = aggregate_data(steps_data,'count',6000)
     ## HR DATA
     hr_data = summarized_data['hr'].copy()
-    agg_hr = datafect(hr_data,'hr',80)
+    agg_hr = aggregate_data(hr_data,'hr',80)
 
     ## Cal data
     cal_data = summarized_data['food'].copy()
-    agg_cal = datafect(cal_data,'food',2000) 
+    agg_cal = aggregate_data(cal_data,'food',2000) 
 
     ## Sleep Data
     sleep_data = summarized_data['sleep'].copy()
-    agg_sleep = datafect(sleep_data,'sleep_duration',7.5)
+    agg_sleep = aggregate_data(sleep_data,'sleep_duration',7.5)
     # Round to 1 decimal place only if needed
     if agg_sleep != round(agg_sleep,1):
         agg_sleep = round(agg_sleep,1)
@@ -195,10 +195,10 @@ def fetch_stats(dfs):
 
 
     goals = {
-    "Steps": f"{daily_steps} / {daily_steps_target}",
-    "Sleep": f"{daily_sleep} / {daily_sleep_target} hrs",
-    "Calories": f"{daily_cal} / {daily_cal_target} kcal",
-    "Active Minutes": f"{daily_active_mins} / {daily_active_mins_target} min"
+    "Steps": f"{daily_steps:.0f} / {daily_steps_target}",
+    "Sleep": f"{daily_sleep:.1f} / {daily_sleep_target} hrs",
+    "Calories": f"{daily_cal:.0f} / {daily_cal_target} kcal",
+    "Active Minutes": f"{daily_active_mins:.0f} / {daily_active_mins_target} min"
     }   
     
     ########## goals donut chart ############################

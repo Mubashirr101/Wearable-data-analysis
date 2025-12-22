@@ -103,7 +103,7 @@ def chartBinningjsons(dfJson,xval,xtitle,yval,ytitle,):
     return chartBin
 
 
-def loadWorkoutimages(workout_types, workout_name, supabase,is_svg = False):   
+def loadWorkoutimages(workout_types, workout_name, supabase,is_svg = False):       
     if not workout_name.lower().endswith((".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg")):
         if is_svg == True:
             workout_name += ".svg"
@@ -116,7 +116,6 @@ def loadWorkoutimages(workout_types, workout_name, supabase,is_svg = False):
     file_data = None
     found_path = None
     for workout_type in workout_types:
-        # use single quotes inside replace to avoid f-string syntax issues
         file_path = f"{workout_type}/{workout_name.replace(' ', '-').lower()}"
         for attempt in range(retries):
             try:
@@ -125,18 +124,31 @@ def loadWorkoutimages(workout_types, workout_name, supabase,is_svg = False):
                 break
             except (RemoteProtocolError, ReadTimeout, ConnectError) as e:
                 if attempt < retries - 1:
-                    st.warning(f"⚠️ Download failed for {file_path} (attempt {attempt+1}/{retries}). Retrying...")
+                    # st.warning(f"⚠️ Download failed for {file_path} (attempt {attempt+1}/{retries}). Retrying...")
                     time.sleep(1)
                 else:
                     st.error(f"❌ Failed to download {file_path}: {str(e)}")
-                    
             except Exception as e:
+                # Minimal change: try with 's' added/removed if not found
+                alt_file_data = None
+                alt_file_path = None
+                if workout_type.endswith('s'):
+                    alt_type = workout_type[:-1]
+                else:
+                    alt_type = workout_type + 's'
+                alt_file_path = f"{alt_type}/{workout_name.replace(' ', '-').lower()}"
+                try:
+                    alt_file_data = supabase.storage.from_(bucket_name).download(alt_file_path)
+                    file_data = alt_file_data
+                    found_path = alt_file_path
+                    break
+                except Exception:
+                    pass
                 break
         if file_data:
             break
 
     if not file_data:
-        # st.error(f"❌ '{workout_name}' not found in: {', '.join(workout_types)}")
         return None, None
 
     # SVG case (return HTML img tag)
@@ -151,7 +163,6 @@ def loadWorkoutimages(workout_types, workout_name, supabase,is_svg = False):
         img = Image.open(io.BytesIO(file_data))
         return "img", img
     except Exception as e:
-        # don't call st.error here (can break headless runs), just return None so caller can handle gracefully
         return None, None
 
 
@@ -285,16 +296,33 @@ def show_activity(df_exercise,df_exercise_routine,df_custom_exercise,df_inbuilt_
                 detail_c5.markdown(f"##### Avg HR 🫀 \n {mean_hr:.0f} bpm")
                 detail_c6.markdown(f"##### Min HR 🫀 \n {min_hr:.0f} bpm")  
                 # routine images  (muscles hit)
-                for types in workout_types:                    
-                    img_type, img_data = loadWorkoutimages(workout_types, types.lower() , supabase_client, is_svg= True)
+                SMALL = 32  
+
+                details_container.markdown(
+                    """
+                    <style>
+                    .muscle-icon img {
+                        height: 5% !important;
+                        object-fit: contain;
+                    }
+                        
+                    </style>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+                cols = details_container.columns(len(workout_types))
+                for col, muscle in zip(cols, workout_types):                  
+                    img_type, img_data = loadWorkoutimages(workout_types, muscle.lower() , supabase_client, is_svg= True)
                     if img_type == "svg":
                             if img_data:
-                                details_container.markdown(img_data, unsafe_allow_html=True)
+                                col.markdown(
+                                    f'<span class="muscle-icon" >{img_data}</span>', unsafe_allow_html=True)
                             else:
-                                details_container.caption("Image not available")
+                                col.caption("Image not available")
                     else:
                             if img_data:
-                                details_container.image(img_data)
+                                col.image(img_data,width=SMALL)
                             else:
                                 details_container.caption("Image not available")
               
@@ -392,29 +420,33 @@ def show_activity(df_exercise,df_exercise_routine,df_custom_exercise,df_inbuilt_
                         
                         if workout_name:
                             single_container = exercises_container.container(border=False)
-                            single_container.markdown(f"- ##### {workout_name}")
+                            single_container.markdown(f"- ##### {workout_name}")          
+                            sec1, sec2 = single_container.columns(2)                  
                             img_type, img_data = loadWorkoutimages(workout_types,workout_name, supabase_client)
                             if img_data:
                                 if img_type == "svg":
-                                    single_container.markdown(img_data, unsafe_allow_html=True)
+                                    sec1.markdown(img_data, unsafe_allow_html=True)
                                 else:
-                                    single_container.image(img_data)
+                                    sec1.image(img_data,width=300)
                             else:
                                 single_container.caption("Image not available")
-                        c1,c2,c3,c4,c5 = single_container.columns(5)                
-                        if workout_duration:
-                            c1.markdown(f"{workout_duration}")
-                        if workout_reps is not None and not pd.isna(workout_reps):
-                            c2.markdown(f"{workout_reps: .0f} reps")
-                        if workout_cals:
-                            c3.markdown(f"{workout_cals:.0f} Cal")
-                        if workout_time:
-                            c4.markdown(f"{workout_time}")
-                        
+                                
+                            # stats_container = 
+                            c1,c2 = sec2.columns(2)                
+                            c3,c4 = sec2.columns(2)                            
+                            if workout_duration:
+                                c1.markdown(f"{workout_duration}")
+                            if workout_reps is not None and not pd.isna(workout_reps):
+                                c2.markdown(f"{workout_reps: .0f} reps")
+                            if workout_cals:
+                                c3.markdown(f"{workout_cals:.0f} Cal")
+                            if workout_time:
+                                c4.markdown(f"{workout_time}")
+                            
                         
                         # vitals
                         safe_name = re.sub(r'\W+', '_', str(workout_name))
-                        if c5.button('📈🌡️ Vitals',key = f'vitals_{safe_name}'):
+                        if sec2.button('📈🌡️ Vitals',key = f'vitals_{safe_name}'):
                             vitals(workout_name,row)
 
                         
