@@ -431,9 +431,9 @@ def show_activity(df_exercise,df_exercise_routine,df_custom_exercise,df_inbuilt_
                             else:
                                 single_container.caption("Image not available")
                                 
-                            # stats_container = 
-                            c1,c2 = sec2.columns(2)                
-                            c3,c4 = sec2.columns(2)                            
+                            stats_container = sec2.container(border=False,vertical_alignment = 'center',gap='medium',height='stretch' ,width='stretch')
+                            c1,c2 = stats_container.columns(2)                
+                            c3,c4 = stats_container.columns(2)                            
                             if workout_duration:
                                 c1.markdown(f"{workout_duration}")
                             if workout_reps is not None and not pd.isna(workout_reps):
@@ -446,27 +446,11 @@ def show_activity(df_exercise,df_exercise_routine,df_custom_exercise,df_inbuilt_
                         
                         # vitals
                         safe_name = re.sub(r'\W+', '_', str(workout_name))
-                        if sec2.button('📈🌡️ Vitals',key = f'vitals_{safe_name}'):
+                        if stats_container.button('📈🌡️ Vitals',key = f'vitals_{safe_name}'):
                             vitals(workout_name,row)
 
                         
                                     
-
-            #         # Load and display vitals (from JSONs)
-            #         import json
-            #         try:
-            #             with open("/mnt/data/47bafabf-51bb-4f50-87bc-101692d93dee.com.samsung.health.exercise.live_data.json") as f:
-            #                 live_data = json.load(f)
-            #             with open("/mnt/data/47bafabf-51bb-4f50-87bc-101692d93dee.sensing_status.json") as f:
-            #                 sensing = json.load(f)
-
-            #             hr_values = [d.get("heart_rate") for d in live_data if "heart_rate" in d]
-            #             if hr_values:
-            #                 st.line_chart(pd.Series(hr_values, name="Heart Rate"))
-            #             st.write(f"**Sampling Rate:** {sensing.get('sampling_rate', 'N/A')} ms")
-            #             st.write(f"**Max HR:** {sensing['heart_rate'].get('max_hr_auto', 'N/A')}")
-            #         except Exception as e:
-            #             st.warning(f"Could not load HR/vitals data: {e}")
 
         else:
             st.info("👆 Select a date to view indoor exercise sessions.")
