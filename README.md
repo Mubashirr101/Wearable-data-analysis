@@ -140,7 +140,7 @@ METRICS_CONFIG = {
 ### Dashboard Navigation
 1. **Home**: Overview of daily metrics and goal completion
 2. **Dashboard**: Detailed health metric visualizations with date filtering
-3. **Activity**: GPS activity tracking and route visualization
+3. **Activity**: Workout routine dashboard and GPS activity tracking with route visualization
 4. **Coach**: AI-powered fitness recommendations
 5. **More**: Additional settings and features
 
@@ -166,5 +166,6 @@ This project is licensed under the GNU General Public License v3.0 - see the [LI
 ---
 
 **Note**: This application is designed for personal fitness tracking and should not be used for medical diagnosis. Always consult healthcare professionals for medical advice.
+
 
 
