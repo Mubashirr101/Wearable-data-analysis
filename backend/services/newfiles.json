@@ -86,5 +86,8 @@
         "1": "com.samsung.health.respiratory_rate.csv",
         "2": "com.samsung.health.sleep_stage.csv",
         "3": "com.samsung.shealth.sleep_raw_data.csv"
+    },
+    "samsunghealth_shaikhmubashir197_20251228190189": {
+        "1": "com.samsung.shealth.alerted_stress.csv"
     }
 }

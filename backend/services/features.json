@@ -377,6 +377,18 @@
             "pkg_name",
             "datauuid"
         ],
+        "com.samsung.shealth.alerted_stress": [
+            "create_sh_ver",
+            "start_time",
+            "modify_sh_ver",
+            "update_time",
+            "create_time",
+            "time_offset",
+            "deviceuuid",
+            "pkg_name",
+            "end_time",
+            "datauuid"
+        ],
         "com.samsung.shealth.badge": [
             "number_of_streak",
             "start_time",
@@ -661,20 +673,6 @@
             "pkg_name",
             "datauuid",
             "food_info_id"
-        ],
-        "com.samsung.shealth.food_frequent": [
-            "eveningsnack_count",
-            "update_time",
-            "create_time",
-            "morningsnack_count",
-            "dinner_count",
-            "breakfast_count",
-            "deviceuuid",
-            "pkg_name",
-            "afternoonsnack_count",
-            "datauuid",
-            "food_info_id",
-            "lunch_count"
         ],
         "com.samsung.shealth.food_goal": [
             "update_time",
