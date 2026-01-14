@@ -868,18 +868,6 @@
             "set_time",
             "datauuid"
         ],
-        "com.samsung.shealth.sleep_raw_data": [
-            "create_sh_ver",
-            "modify_sh_ver",
-            "update_time",
-            "create_time",
-            "sleep_uuid",
-            "data",
-            "version",
-            "deviceuuid",
-            "pkg_name",
-            "datauuid"
-        ],
         "com.samsung.shealth.social.leaderboard": [
             "update_time",
             "create_time",
