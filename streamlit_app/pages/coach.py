@@ -317,7 +317,7 @@ def show_coach(df_stress,df_hr,df_spo2,df_steps,df_calorie,df_exercise,df_exerci
         # for fetching range: check for keywords in received prompt like: from .. to .. 
 
         # phrases
-        pattern = r"\b\d{1,2}\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|january|february|march|april|june|july|august|september|october|november|december)\b"
+        pattern = r"\b\d{1,2}\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|january|february|march|april|june|july|august|september|october|november|december)\b|\b\d{1,2}-\d{1,2}-\d{4}\b"
         phrases = ["yesterday","today"]
         # month_patterns = r"(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|january|february|march|april|may|june|july|august|september|october|november|december)"
 
