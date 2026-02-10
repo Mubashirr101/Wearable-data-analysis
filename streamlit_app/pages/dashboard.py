@@ -247,41 +247,7 @@ def render_metric_tab(tab, metric_name, df, config, supabase_client=None):
 
 def cal_tab(tab, metric_name, df, config, supabase_client=None):
     with tab:
-        st.header(f"{config['daily_icon']} {config['title']} Dashboard")
-        
-        # Create main layout columns
-        col1, col2 = st.columns([3, 1])
-        
-        with col1:
-            # View selector
-            view_option = st.radio(
-                "View Mode:",
-                ["Week View", "Month View"],
-                horizontal=True,
-                key=f"{metric_name}_view_selector"
-            )
-        
-        with col2:
-            # Timezone info
-            st.caption(f"Timezone: {config['time_offset']}")
-        
-        # Data preprocessing
-        if not df.empty:
-            # Convert timestamp columns
-            df[config['localized_time']] = pd.to_datetime(df[config['localized_time']], unit='ms', errors='coerce')
-            df[config['date']] = pd.to_datetime(df[config['date']], unit='ms', errors='coerce')
-            
-            # Apply timezone offset
-            # Apply timezone offset locally (no apply_offset needed)
-            offset_str = config['time_offset']  # e.g. "+5:30" or "-7:00"
-            sign = 1 if offset_str.startswith("+") else -1
-            hours, minutes = map(int, offset_str[1:].split(":"))
-            offset = pd.Timedelta(hours=sign * hours, minutes=sign * minutes)
-
-            df[config['localized_time']] = df[config['localized_time']] + offset
-            df[config['date']] = df[config['date']] + offset
-
-        
+        st.header(f"{config['daily_icon']} {config['title']} Dashboard")                       
         # Available calorie metrics for toggling
         calorie_metrics = {
             'Active Calories': config['calories_burned_active_calorie'],
@@ -289,62 +255,34 @@ def cal_tab(tab, metric_name, df, config, supabase_client=None):
             'Exercise Calories': config['total_exercise_calories'],
             'TEF Calories': config['calories_burned_tef_calorie'],
             'Goal Calories': config['goal_calories']
-        }
-        
+        }        
         # Metric
         selected_metrics = [(display_name, col_name) for display_name, col_name in calorie_metrics.items() if col_name in df.columns]        
-        # Main chart based on view mode
-        if not df.empty:
-            if view_option == "Week View":
-                chart_data = prepare_weekly_data(df, config, selected_metrics)
-                chart,chrtdf = create_weekly_chart(chart_data, config,selected_metrics)
-                summary_label = 'Week'
-            else:
-                chart_data = prepare_monthly_data(df, config, selected_metrics)
-                chart,chrtdf = create_monthly_chart(chart_data, config,selected_metrics)
-                summary_label = 'Month'
-            
-            if chart:
-                colchrt,coldf = st.columns([4,2]) 
-                colchrt.altair_chart(chart, width='stretch')
-                with coldf.expander(f'{summary_label} Summary'):
-                    st.dataframe(chrtdf.style.format("{:.2f}"))
+       
         
         # Expandable calendar and daily stats
-        with st.expander("📅 Daily Calorie Details", expanded=True):
-            col1, col2 = st.columns([2, 1])
+        col1, col2 = st.columns([2, 1],vertical_alignment='center')        
+        with col1:
+            # Calendar date picker
+            selected_date = st.date_input("Select Date:", key="calorie_date_picker")
+        with col2:
+            st.write("")  # Spacer
+            if st.button("Refresh Day Stats", key="refresh_cal_stats"):
+                st.rerun()
+        
+        # Display daily stats
+        if not df.empty and selected_date:
+            daily_data = df[df[config['date']].dt.date == selected_date]
             
-            with col1:
-                # Calendar date picker
-                if not df.empty:
-                    min_date = df[config['date']].min().date()
-                    max_date = df[config['date']].max().date()
-                    selected_date = st.date_input(
-                        "Select Date:",
-                        value=min_date,
-                        min_value=min_date,
-                        max_value=max_date,
-                        key="calorie_date_picker"
-                    )
-                else:
-                    selected_date = st.date_input("Select Date:", key="calorie_date_picker")
-            
-            with col2:
-                st.write("")  # Spacer
-                if st.button("Refresh Day Stats", key="refresh_cal_stats"):
-                    st.rerun()
-            
-            # Display daily stats
-            if not df.empty and selected_date:
-                daily_data = df[df[config['date']].dt.date == selected_date]
-                
-                if not daily_data.empty:
+            if not daily_data.empty:
+                daily_cal_container = st.container(border=True)
+                with daily_cal_container:
                     display_daily_stats(daily_data, config, selected_date)
                     display_daily_charts(daily_data, config, selected_metrics)
-                else:
-                    st.info(f"No calorie data available for {selected_date}")
             else:
-                st.info("Please select a date to view daily stats")
+                st.info(f"No calorie data available for {selected_date}")
+        else:
+            st.info("Please select a date to view daily stats")
 
 
 
@@ -761,7 +699,7 @@ def show_dashboard(df_stress,df_hr,df_spo2,df_steps,df_calorie,supabase_client):
             "title": "Calories",
             "daily_icon": "📆🍎",
             "localized_time": "localized_time",
-            "date":"calories_burned_day_time",
+            "date":"localized_time",
             "time_offset": "+05:30",
             "y_label": "Calories",
             "goal_calories":"active_calories_goal",

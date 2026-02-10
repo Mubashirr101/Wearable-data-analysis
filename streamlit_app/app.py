@@ -139,6 +139,7 @@ def warmup():
     engine = get_engine()
     
     dataframes = {}
+    steps_time_offset = None  # Store steps time offset for calorie
     
     def safe_jsonpath(val, template):
         """Generate jsonPath safely for binning columns."""
@@ -194,9 +195,17 @@ def warmup():
         # Steps
         elif metric == "steps" and "step_count_time_offset" in df.columns and "step_count_start_time" in df.columns:
             df["localized_time"] = df.apply(lambda r: apply_offset(r, "step_count_time_offset", "step_count_start_time"), axis=1)
+            # Capture the most common time offset from steps for use with calorie data
+            if not df.empty and "step_count_time_offset" in df.columns:
+                steps_time_offset = df["step_count_time_offset"].mode()[0] if not df["step_count_time_offset"].mode().empty else df["step_count_time_offset"].iloc[0]
         # Calorie 
-        elif metric == "calorie" and "calories_burned_day_time" in df.columns:
-            df["localized_time"] = pd.to_datetime(df["calories_burned_day_time"], errors="coerce")
+        elif metric == "calorie" and "calories_burned_create_time" in df.columns:
+            # Add steps time offset to calorie dataframe
+            if steps_time_offset is not None:
+                df["calorie_time_offset"] = steps_time_offset
+            df["localized_time"] = pd.to_datetime(df["calories_burned_create_time"], errors="coerce")
+            df["localized_time"] = df.apply(lambda r: apply_offset(r, "calorie_time_offset", "calories_burned_create_time"), axis=1)
+            
         # Exercise
         elif metric == "exercise" and "exercise_time_offset" in df.columns and "exercise_start_time" in df.columns:
             df["localized_time"] = df.apply(lambda r: apply_offset(r, "exercise_time_offset", "exercise_start_time"), axis=1)
@@ -263,7 +272,7 @@ class App:
             st.session_state["initialized"] = True
 
         # Navigation
-        pages = ["Dashboard", "Activity", "Coach", "More", "Github"]
+        pages = ["Dashboard", "Activity", "Coach", "Github"]
         parent_dir = os.path.dirname(os.path.abspath(__file__))
         logo_path = os.path.join(parent_dir, "home_dark.svg")
         urls = {"Github": "https://github.com/Mubashirr101/Wearable-data-analysis"}
@@ -329,7 +338,6 @@ class App:
                 self.dataframes.get("inbuilt_exercises"),                
                 self.supabase_client 
             ),
-            'More': pg.show_more,
         }
 
         go_to = functions.get(page)
