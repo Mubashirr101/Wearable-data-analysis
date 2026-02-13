@@ -1,4 +1,5 @@
-# 🏃‍♂️ Athlete Tracker & Coach
+# 🏃‍♂️ AthleteX : Athlete Tracker & Coach
+[![GitHub Clones](https://img.shields.io/badge/dynamic/json?color=success&label=Clone&query=count&url=https://gist.githubusercontent.com/Mubashirr101/f036a8c9e2e66f677bc2765ebe96241f/raw/clone.json&logo=github)](https://github.com/MShawon/github-clone-count-badge)
 
 A comprehensive fitness analytics platform that aggregates health data from multiple sources, processes it with machine learning, and delivers personalized insights through an interactive web dashboard and AI coaching assistant.
 
@@ -166,6 +167,8 @@ This project is licensed under the GNU General Public License v3.0 - see the [LI
 ---
 
 **Note**: This application is designed for personal fitness tracking and should not be used for medical diagnosis. Always consult healthcare professionals for medical advice.
+
+
 
 
 
