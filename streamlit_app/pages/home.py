@@ -248,9 +248,10 @@ def show_home(df_hr,df_steps_daily,df_calorie,df_food_intake,df_sleep,supabase_c
                     overflow: hidden; 
                     text-overflow: ellipsis; 
                     width: 100%;
-                    margin: 0px !important;    
+                    margin: 0px !important; 
+                    padding-bottom: 2rem;   
                 ">
-                    🏃🏻‍♂️ Athlete Tracker
+                    🏃🏻‍♂️ AthleteX
                 </h1>
                 """,
             unsafe_allow_html=True)

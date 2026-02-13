@@ -245,13 +245,19 @@ class App:
             .block-container {
                 padding-top: 0rem !important;
                 margin-top: 0rem !important;
+                
             }
 
             /* Remove extra spacing between elements */
             .st-emotion-cache-p6n0jw {
                 gap: 0rem !important;
             }
-
+            .st-emotion-cache-1n6tfoc {
+                gap: 0rem !important;
+            }
+            .st-emotion-cache-tn0cau {
+                gap: 0.1rem !important;
+            }
             /* Remove navbar bottom margin if any */
             nav {
                 margin-bottom: 0px !important;
@@ -272,21 +278,23 @@ class App:
             st.session_state["initialized"] = True
 
         # Navigation
-        pages = ["Dashboard", "Activity", "Coach", "Github"]
+        pages = ["Dashboard", "Activity", "Coach"]
         parent_dir = os.path.dirname(os.path.abspath(__file__))
         logo_path = os.path.join(parent_dir, "home_dark.svg")
-        urls = {"Github": "https://github.com/Mubashirr101/Wearable-data-analysis"}
         styles = {
             "nav": {
-                "background-color": "rgba(46, 56, 71, 1)"
-,
+                "background-color": "rgba(46, 56, 71, 1)",
+
             },
             "div": {
                 "max-width": "32rem",
+                
             },
             "span": {
                 "border-radius": "0.5rem",
                 "color": "rgb(255, 255, 255)",
+                "font-size": "clamp(18px, 1.2vw, 25px)",   
+                "text-align":"center",
                 "margin": "0 0.125rem",
                 "padding": "0.4375rem 0.625rem",
             },
@@ -299,7 +307,7 @@ class App:
         }
         options = {'show_menu': False, 'show_sidebar': False, 'use_padding': False}
         
-        page = st_navbar(pages, logo_path=logo_path, styles=styles, urls=urls, options=options)
+        page = st_navbar(pages, logo_path=logo_path, styles=styles, options=options)
 
         functions = {
             'Home': lambda: pg.show_home(
