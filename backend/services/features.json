@@ -411,23 +411,6 @@
             "end_time",
             "datauuid"
         ],
-        "com.samsung.shealth.best_records": [
-            "source_id",
-            "device_type",
-            "update_time",
-            "create_time",
-            "source_pkg_name",
-            "date",
-            "type",
-            "value",
-            "is_shown",
-            "extra_data",
-            "extra_type",
-            "deviceuuid",
-            "pkg_name",
-            "controller_id",
-            "datauuid"
-        ],
         "com.samsung.shealth.breathing": [
             "duration",
             "create_sh_ver",
@@ -595,20 +578,6 @@
             "pkg_name",
             "program_uuid",
             "datauuid"
-        ],
-        "com.samsung.shealth.exercise.recovery_heart_rate": [
-            "create_sh_ver",
-            "start_time",
-            "modify_sh_ver",
-            "update_time",
-            "create_time",
-            "time_offset",
-            "deviceuuid",
-            "exercise_id",
-            "pkg_name",
-            "end_time",
-            "datauuid",
-            "heart_rate"
         ],
         "com.samsung.shealth.exercise.routine": [
             "total_average_hr",
@@ -933,6 +902,26 @@
             "pkg_name",
             "datauuid",
             "day_time"
+        ],
+        "com.samsung.shealth.stress": [
+            "create_sh_ver",
+            "start_time",
+            "custom",
+            "binning_data",
+            "tag_id",
+            "modify_sh_ver",
+            "update_time",
+            "create_time",
+            "max",
+            "min",
+            "score",
+            "algorithm",
+            "time_offset",
+            "deviceuuid",
+            "comment",
+            "pkg_name",
+            "end_time",
+            "datauuid"
         ],
         "com.samsung.shealth.stress.histogram": [
             "update_time",
