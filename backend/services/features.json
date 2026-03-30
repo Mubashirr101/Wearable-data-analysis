@@ -554,6 +554,18 @@
             "datauuid",
             "visibility"
         ],
+        "com.samsung.shealth.exercise.extension": [
+            "live_data_internal",
+            "location_data",
+            "update_time",
+            "create_time",
+            "deviceuuid",
+            "exercise_id",
+            "live_data",
+            "pkg_name",
+            "location_data_internal",
+            "datauuid"
+        ],
         "com.samsung.shealth.exercise.hr_zone.settings": [
             "create_sh_ver",
             "start_time",
