@@ -32,10 +32,9 @@ def show_coach(df_stress,df_hr,df_spo2,df_steps,df_calorie,df_exercise,df_exerci
     # ---- LLM PROVIDER CONFIG ----
     PROVIDER_MODELS = {
         "Gemini": [
-            "gemini-2.0-flash",
-            "gemini-2.0-flash-lite",
-            "gemini-1.5-pro",
-            "gemini-1.5-flash",
+            "gemini-2.5-flash",
+            "gemini-2.5-flash-lite",
+            "gemini-2.5-pro",
         ],
         "OpenRouter": [
             "meta-llama/llama-3.3-70b-instruct",
@@ -65,7 +64,7 @@ def show_coach(df_stress,df_hr,df_spo2,df_steps,df_calorie,df_exercise,df_exerci
         selected_provider = st.selectbox(
             "Provider",
             options=list(PROVIDER_MODELS.keys()),
-            index=0,
+            index=list(PROVIDER_MODELS.keys()).index("Groq"),
             label_visibility="collapsed",
         )
 
@@ -75,7 +74,7 @@ def show_coach(df_stress,df_hr,df_spo2,df_steps,df_calorie,df_exercise,df_exerci
         selected_model = st.selectbox(
             "Model",
             options=PROVIDER_MODELS[selected_provider],
-            index=0,
+            index=PROVIDER_MODELS[selected_provider].index("llama-3.1-8b-instant") if selected_provider == "Groq" else 0,
             label_visibility="collapsed",
         )
 
@@ -394,6 +393,32 @@ Explain any noticeable outliers or patterns using the context."""
             st.markdown(message["content"], unsafe_allow_html=True)
     st.write("")
 
+    # ---- FRIENDLY ERROR MESSAGES ----
+    PROVIDER_TIPS = {
+        "Groq":       "Try switching to a different Groq model, or swap to Gemini / OpenRouter above.",
+        "Gemini":     "Try switching to a lighter Gemini model (e.g. Flash), or swap to Groq above.",
+        "OpenRouter": "Try a different OpenRouter model, or swap to Groq above.",
+    }
+
+    def friendly_error(e, provider):
+        msg = str(e).lower()
+        tip = PROVIDER_TIPS.get(provider, "Try switching providers above.")
+
+        if "rate limit" in msg or "429" in msg or "quota" in msg:
+            return f"⚠️ **Rate limit hit on {provider}.** You've sent too many requests too quickly. Wait a moment, then try again — or {tip}"
+        elif "decommissioned" in msg or "deprecated" in msg or "no longer supported" in msg:
+            return f"⚠️ **Model no longer available.** This model was retired by {provider}. {tip}"
+        elif "503" in msg or "502" in msg or "service unavailable" in msg or "overloaded" in msg:
+            return f"⚠️ **{provider} is temporarily overloaded.** Their servers are busy right now. Wait a few seconds and retry — or {tip}"
+        elif "401" in msg or "unauthorized" in msg or "invalid api key" in msg or "api key" in msg:
+            return f"⚠️ **API key issue with {provider}.** Check that your key is set correctly in `.env`. {tip}"
+        elif "timeout" in msg or "timed out" in msg:
+            return f"⚠️ **{provider} took too long to respond.** The request timed out. Try again or {tip}"
+        elif "400" in msg or "bad request" in msg:
+            return f"⚠️ **Bad request sent to {provider}.** This usually means an unsupported model or malformed input. {tip}"
+        else:
+            return f"⚠️ **Something went wrong with {provider}.** {tip}\n\n_Details: {str(e)}_"
+
     # ---- CHAT INPUT ----
     if prompt := st.chat_input("Ask something..."):
         st.session_state.messages.append({"role": "user", "content": prompt})
@@ -401,10 +426,14 @@ Explain any noticeable outliers or patterns using the context."""
             st.markdown(prompt)
 
         with st.chat_message("assistant"):
-            ai_reply = call_ai(prompt, dfs, selected_provider, selected_model)
-            st.markdown(ai_reply, unsafe_allow_html=True)
+            try:
+                ai_reply = call_ai(prompt, dfs, selected_provider, selected_model)
+                st.markdown(ai_reply, unsafe_allow_html=True)
+                st.session_state.messages.append({"role": "assistant", "content": ai_reply})
+            except Exception as e:
+                err_msg = friendly_error(e, selected_provider)
+                st.warning(err_msg)
+                print(f"[LLM ERROR] {e}")
         st.write("")
-
-        st.session_state.messages.append({"role": "assistant", "content": ai_reply})
 
     print(st.session_state.messages)
